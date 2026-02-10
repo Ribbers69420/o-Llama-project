@@ -258,10 +258,13 @@ const ComponentNode: React.FC<{
       ${depth > 0 ? 'ml-6 border-l-2 border-slate-700 pl-4' : ''}
     `}>
       <div
+        role="button"
+        tabIndex={0}
         onClick={() => toggleExpansion(component.id)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleExpansion(component.id); } }}
         className={`
           flex items-center p-3 rounded-lg cursor-pointer border
-          hover:bg-slate-800/50 transition-colors
+          hover:bg-slate-800/50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/50
           ${isWarning ? 'bg-red-900/10 border-red-500/50 hover:bg-red-900/20' : 'bg-slate-900 border-slate-700'}
         `}
       >
@@ -319,6 +322,11 @@ const ComponentNode: React.FC<{
                 label="RESILIENCE"
                 value={component.performanceMetrics.resilience}
                 colorClass="bg-violet-500"
+              />
+              <MetricBar
+                label="ADAPTABILITY FACTOR"
+                value={component.performanceMetrics.adaptabilityFactor}
+                colorClass="bg-amber-500"
               />
             </div>
 
@@ -410,6 +418,16 @@ const EnterpriseQuantumVisualizer: React.FC = () => {
 
   const structure = useMemo(() => generateFrameworkStructure(), []);
 
+  const allComponentIds = useMemo(() => {
+    const ids: string[] = [];
+    const collect = (c: FrameworkComponent) => {
+      ids.push(c.id);
+      c.subComponents?.forEach(collect);
+    };
+    collect(structure);
+    return ids;
+  }, [structure]);
+
   const toggleExpansion = useCallback((id: string) => {
     setFrameworkState(prev => ({
       ...prev,
@@ -468,6 +486,12 @@ const EnterpriseQuantumVisualizer: React.FC = () => {
               Architectural Topology
             </h2>
             <div className="flex gap-2">
+              <button
+                onClick={() => setFrameworkState(prev => ({ ...prev, expandedComponents: allComponentIds }))}
+                className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 transition-colors"
+              >
+                Expand All
+              </button>
               <button
                 onClick={() => setFrameworkState(prev => ({ ...prev, expandedComponents: [] }))}
                 className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 transition-colors"
