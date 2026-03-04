@@ -1,0 +1,2656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="description" content="Fire TV Sideload Command Center - Complete guide for sideloading apps on Amazon Fire TV using the Downloader app. Setup, browser, files, favorites, settings, troubleshooting and more.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FTV Sideload">
+<meta name="theme-color" content="#FF6D00">
+<link rel="manifest" href="data:application/json,%7B%22name%22%3A%22Fire%20TV%20Sideload%20Command%20Center%22%2C%22short_name%22%3A%22FTV%20Sideload%22%2C%22description%22%3A%22Complete%20guide%20for%20sideloading%20apps%20on%20Amazon%20Fire%20TV%22%2C%22start_url%22%3A%22.%2Fdownloader-guide.html%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%231a1a1a%22%2C%22theme_color%22%3A%22%23FF6D00%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%2520viewBox%3D'0%200%20100%20100'%253E%253Crect%2520width%3D'100'%2520height%3D'100'%2520rx%3D'20'%2520fill%3D'%2523FF6D00'%2F%253E%253Ctext%2520y%3D'.9em'%2520font-size%3D'70'%2520text-anchor%3D'middle'%2520x%3D'50'%253E%25F0%259F%2594%25A5%253C%2Ftext%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+<title>Fire TV Sideload Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== PRINT STYLESHEET ===== */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .splash, #progress-bar, .toast-container, #nav-search-wrap, .header-actions { display: none !important; }
+  nav { display: none !important; }
+  .panel { display: block !important; page-break-inside: avoid; margin-bottom: 2rem; }
+  .card { border: 1px solid #ccc !important; background: #fff !important; color: #000 !important; }
+}
+
+/* ===== CSS VARIABLES ===== */
+:root {
+  --coal: #1a1a1a;
+  --coal-2: #222222;
+  --coal-3: #2a2a2a;
+  --coal-4: #333333;
+  --ash: #888888;
+  --ash-2: #aaaaaa;
+  --ash-3: #cccccc;
+  --flame: #FF6D00;
+  --flame-2: #FF8C00;
+  --flame-3: #FFB347;
+  --ember: #FF3D00;
+  --smoke: #444444;
+  --white: #f5f5f5;
+  --bg: #141414;
+  --surface: #1e1e1e;
+  --surface-2: #252525;
+  --surface-3: #2d2d2d;
+  --border: #333333;
+  --border-2: #444444;
+  --text: #e8e8e8;
+  --text-dim: #999999;
+  --text-muted: #666666;
+  --success: #4caf50;
+  --info: #2196f3;
+  --warning: #ff9800;
+  --error: #f44336;
+  --transition: all 0.25s ease;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.4);
+  --shadow-flame: 0 0 20px rgba(255,109,0,0.2);
+}
+
+[data-theme="light"] {
+  --coal: #f0f0f0;
+  --coal-2: #e8e8e8;
+  --coal-3: #ddd;
+  --coal-4: #ccc;
+  --ash: #888;
+  --ash-2: #666;
+  --ash-3: #444;
+  --smoke: #bbb;
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface-2: #f8f8f8;
+  --surface-3: #eeeeee;
+  --border: #ddd;
+  --border-2: #ccc;
+  --text: #1a1a1a;
+  --text-dim: #555;
+  --text-muted: #888;
+  --shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+
+/* ===== RESET ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  transition: background 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
+}
+
+/* ===== SPLASH SCREEN ===== */
+.splash {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+.splash.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.splash-logo {
+  font-size: 3rem;
+  animation: pulse 1s ease infinite;
+}
+.splash-title {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--flame);
+  font-size: 1.1rem;
+  margin-top: 1rem;
+  letter-spacing: 0.1em;
+}
+.splash-bar {
+  width: 200px;
+  height: 3px;
+  background: var(--surface-3);
+  border-radius: 2px;
+  margin-top: 1.5rem;
+  overflow: hidden;
+}
+.splash-bar-fill {
+  height: 100%;
+  background: var(--flame);
+  border-radius: 2px;
+  animation: load 0.8s ease forwards;
+}
+
+/* ===== SCROLL PROGRESS BAR ===== */
+#progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--flame), var(--flame-3));
+  width: 0%;
+  z-index: 1000;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 8px rgba(255,109,0,0.6);
+}
+
+/* ===== LAYOUT ===== */
+.app-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+header {
+  position: sticky;
+  top: 3px;
+  z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  transition: var(--transition);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+.header-icon {
+  font-size: 1.5rem;
+  filter: drop-shadow(0 0 8px var(--flame));
+}
+.header-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--flame);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.header-version {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.btn-icon {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: var(--transition);
+}
+.btn-icon:hover { background: var(--flame); color: #fff; border-color: var(--flame); }
+.btn-install {
+  display: none;
+  background: var(--flame);
+  color: #fff;
+  border: none;
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  transition: var(--transition);
+}
+.btn-install:hover { background: var(--flame-2); }
+.btn-install.visible { display: flex; align-items: center; gap: 0.4rem; }
+
+.content-area {
+  display: flex;
+  flex: 1;
+}
+
+nav {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 1rem 0.75rem;
+  position: sticky;
+  top: 57px;
+  height: calc(100vh - 57px);
+  overflow-y: auto;
+  transition: var(--transition);
+}
+#nav-search-wrap {
+  margin-bottom: 0.75rem;
+  position: relative;
+}
+#nav-search {
+  width: 100%;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.4rem 2.2rem 0.4rem 0.7rem;
+  border-radius: var(--radius);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  transition: var(--transition);
+}
+#nav-search:focus { outline: none; border-color: var(--flame); }
+#nav-search-count {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-align: left;
+  transition: var(--transition);
+  margin-bottom: 0.15rem;
+  position: relative;
+}
+.nav-btn:hover { background: var(--surface-3); color: var(--text); }
+.nav-btn.active {
+  background: rgba(255,109,0,0.12);
+  border-color: rgba(255,109,0,0.3);
+  color: var(--flame);
+}
+.nav-btn .nav-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  width: 16px;
+  flex-shrink: 0;
+}
+.nav-btn.active .nav-num { color: var(--flame); }
+.nav-btn .nav-badge {
+  margin-left: auto;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.nav-btn.active .nav-badge { background: rgba(255,109,0,0.2); color: var(--flame); border-color: rgba(255,109,0,0.4); }
+.nav-btn.hidden-search { display: none; }
+
+main {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-x: hidden;
+}
+
+/* ===== STATUS BAR ===== */
+.status-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.3rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  margin-right: 0.3rem;
+  animation: pulse 2s infinite;
+}
+.status-offline { color: var(--warning) !important; }
+.status-offline .status-dot { background: var(--warning); }
+.status-pwa { color: var(--flame); }
+
+/* ===== PANELS ===== */
+.panel {
+  display: none;
+  animation: fadeInUp 0.3s ease;
+}
+.panel.active { display: block; }
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  transition: var(--transition);
+  opacity: 0;
+  transform: translateY(20px);
+}
+.card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.card:hover { border-color: var(--border-2); box-shadow: var(--shadow); }
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.card-icon {
+  font-size: 1.25rem;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,109,0,0.1);
+  border: 1px solid rgba(255,109,0,0.2);
+  border-radius: var(--radius);
+}
+.card-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.card-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+
+/* ===== PANEL HEADERS ===== */
+.panel-header {
+  margin-bottom: 1.5rem;
+}
+.panel-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--flame);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.panel-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 0.2rem;
+}
+.panel-desc {
+  color: var(--text-dim);
+  margin-top: 0.4rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+/* ===== COPYABLE ELEMENTS ===== */
+.copyable {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.copy-btn-inline {
+  opacity: 0;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 4px;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.copyable:hover .copy-btn-inline { opacity: 1; }
+.copy-btn-inline:hover { background: var(--flame); color: #fff; border-color: var(--flame); }
+.flash-copy {
+  animation: flashCopy 0.4s ease !important;
+}
+
+kbd {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--surface-3);
+  border: 1px solid var(--border-2);
+  border-bottom: 3px solid var(--border-2);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-block;
+}
+kbd:hover { border-color: var(--flame); color: var(--flame); }
+
+.path-badge {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.78rem;
+  color: var(--flame);
+  cursor: pointer;
+  display: inline-block;
+  transition: var(--transition);
+}
+.path-badge:hover { border-color: var(--flame); background: rgba(255,109,0,0.1); }
+
+.format-block {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--coal-3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--flame);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  font-size: 0.82rem;
+  color: var(--ash-3);
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+.format-block:hover { border-left-color: var(--flame-2); background: var(--surface-2); }
+.format-block .copy-overlay {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  opacity: 0;
+  background: var(--flame);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: 'JetBrains Mono', monospace;
+}
+.format-block:hover .copy-overlay { opacity: 1; }
+
+/* ===== STATS COUNTER ===== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.stat-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+  transition: var(--transition);
+}
+.stat-card:hover { border-color: var(--flame); box-shadow: var(--shadow-flame); }
+.stat-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--flame);
+  line-height: 1;
+}
+.stat-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ===== CHECKLIST ===== */
+.checklist { list-style: none; }
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius);
+  transition: var(--transition);
+  cursor: pointer;
+  border: 1px solid transparent;
+  margin-bottom: 0.4rem;
+}
+.checklist-item:hover { background: var(--surface-2); border-color: var(--border); }
+.checklist-item.done {
+  opacity: 0.65;
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+.check-box {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-2);
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  transition: var(--transition);
+  margin-top: 1px;
+}
+.checklist-item.done .check-box {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+.progress-wrap {
+  background: var(--surface-3);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--flame), var(--flame-3));
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.progress-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ===== DEVICE SELECTOR ===== */
+.device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.device-btn {
+  background: var(--surface-2);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.65rem 0.75rem;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+.device-btn:hover { border-color: var(--flame); color: var(--text); }
+.device-btn.active { border-color: var(--flame); background: rgba(255,109,0,0.1); color: var(--flame); font-weight: 600; }
+.device-btn .device-icon { font-size: 1.3rem; display: block; margin-bottom: 0.3rem; }
+
+/* ===== TOGGLES ===== */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-info .tg-label { font-size: 0.85rem; font-weight: 500; }
+.toggle-info .tg-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+.toggle {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.toggle input { display: none; }
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--surface-3);
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.toggle input:checked ~ .toggle-track { background: var(--flame); border-color: var(--flame); }
+.toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: var(--transition);
+  pointer-events: none;
+}
+.toggle input:checked ~ .toggle-track .toggle-thumb { transform: translateX(18px); }
+
+/* ===== ACCORDION ===== */
+.accordion {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+.accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  background: var(--surface-2);
+  transition: var(--transition);
+  user-select: none;
+}
+.accordion-header:hover { background: var(--surface-3); }
+.accordion-header .acc-title { font-size: 0.88rem; font-weight: 600; }
+.accordion-header .acc-badge {
+  background: rgba(255,109,0,0.15);
+  color: var(--flame);
+  border: 1px solid rgba(255,109,0,0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+.accordion-arrow { transition: transform 0.3s ease; font-size: 0.75rem; color: var(--text-muted); }
+.accordion.open .accordion-arrow { transform: rotate(180deg); }
+.accordion-body {
+  display: none;
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.accordion.open .accordion-body { display: block; }
+
+/* ===== TROUBLESHOOT ===== */
+.issue-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+.issue-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.issue-header:hover { background: var(--surface-3); }
+.issue-icon { font-size: 1rem; flex-shrink: 0; }
+.issue-title { font-size: 0.85rem; font-weight: 600; flex: 1; }
+.issue-arrow { transition: transform 0.3s ease; color: var(--text-muted); font-size: 0.75rem; }
+.issue-card.open .issue-arrow { transform: rotate(180deg); }
+.issue-body {
+  display: none;
+  padding: 0 1rem 1rem;
+  border-top: 1px solid var(--border);
+}
+.issue-card.open .issue-body { display: block; padding-top: 0.75rem; }
+.fix-list { list-style: none; }
+.fix-list li {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  font-size: 0.83rem;
+  color: var(--text-dim);
+}
+.fix-list li::before { content: '→'; color: var(--flame); flex-shrink: 0; }
+
+/* ===== SHORTCODE GENERATOR ===== */
+.shortcode-input-wrap {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.input-field {
+  flex: 1;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--radius);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  transition: var(--transition);
+}
+.input-field:focus { outline: none; border-color: var(--flame); }
+.input-field.error { border-color: var(--error); }
+.input-error-msg {
+  font-size: 0.75rem;
+  color: var(--error);
+  margin-top: 0.25rem;
+  display: none;
+}
+.input-error-msg.visible { display: block; }
+.btn-primary {
+  background: var(--flame);
+  color: #fff;
+  border: none;
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--radius);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.btn-primary:hover { background: var(--flame-2); }
+.btn-secondary {
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.btn-secondary:hover { border-color: var(--flame); color: var(--flame); }
+.generated-code {
+  background: var(--coal-3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--flame);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--flame);
+  word-break: break-all;
+  display: none;
+}
+.generated-code.visible { display: block; }
+.history-list { list-style: none; margin-top: 0.5rem; }
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 0.3rem;
+  background: var(--surface-2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.history-item:hover { border-color: var(--flame); color: var(--flame); }
+.history-item .hi-time { font-size: 0.65rem; color: var(--text-muted); margin-left: auto; }
+
+/* ===== APK LIBRARY ===== */
+.category-filter {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.cat-btn {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: 'Outfit', sans-serif;
+}
+.cat-btn:hover { border-color: var(--flame); color: var(--flame); }
+.cat-btn.active { background: rgba(255,109,0,0.15); border-color: var(--flame); color: var(--flame); font-weight: 600; }
+.apk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+.apk-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.apk-card:hover { border-color: var(--flame); box-shadow: var(--shadow-flame); transform: translateY(-2px); }
+.apk-card.hidden-filter { display: none; }
+.apk-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+.apk-name { font-weight: 700; font-size: 0.9rem; }
+.apk-cat {
+  font-size: 0.6rem;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.cat-media { color: #e91e63; border-color: rgba(233,30,99,0.4); background: rgba(233,30,99,0.08); }
+.cat-browser { color: #2196f3; border-color: rgba(33,150,243,0.4); background: rgba(33,150,243,0.08); }
+.cat-launcher { color: #9c27b0; border-color: rgba(156,39,176,0.4); background: rgba(156,39,176,0.08); }
+.cat-utility { color: #4caf50; border-color: rgba(76,175,80,0.4); background: rgba(76,175,80,0.08); }
+.apk-desc { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; flex: 1; }
+.apk-note { font-size: 0.7rem; color: var(--text-muted); font-style: italic; }
+.apk-copy-btn {
+  width: 100%;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 0.45rem;
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.apk-copy-btn:hover { background: rgba(255,109,0,0.1); border-color: var(--flame); color: var(--flame); }
+
+/* ===== FAVORITES BUILDER ===== */
+.fav-builder textarea {
+  width: 100%;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+  transition: var(--transition);
+}
+.fav-builder textarea:focus { outline: none; border-color: var(--flame); }
+
+/* ===== TOAST ===== */
+.toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+.toast {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.65rem 1rem;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 220px;
+  max-width: 320px;
+  box-shadow: var(--shadow);
+  pointer-events: all;
+  animation: slideInRight 0.3s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  border-left: 3px solid var(--border);
+}
+.toast.success { border-left-color: var(--success); }
+.toast.info { border-left-color: var(--info); }
+.toast.warning { border-left-color: var(--warning); }
+.toast.error { border-left-color: var(--error); }
+.toast.fade-out { opacity: 0; transform: translateX(20px); }
+.toast-icon { font-size: 1rem; flex-shrink: 0; }
+.toast-msg { flex: 1; font-family: 'Outfit', sans-serif; }
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.toast-close:hover { color: var(--text); }
+
+/* ===== INFO BOXES ===== */
+.info-box {
+  background: rgba(33,150,243,0.08);
+  border: 1px solid rgba(33,150,243,0.25);
+  border-left: 3px solid var(--info);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  font-size: 0.83rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 0.75rem 0;
+}
+.warn-box {
+  background: rgba(255,152,0,0.08);
+  border: 1px solid rgba(255,152,0,0.25);
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  font-size: 0.83rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 0.75rem 0;
+}
+.step-list { counter-reset: step; list-style: none; margin: 0.5rem 0; }
+.step-list li {
+  counter-increment: step;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.5rem 0;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.step-list li::before {
+  content: counter(step);
+  background: rgba(255,109,0,0.15);
+  border: 1px solid rgba(255,109,0,0.3);
+  color: var(--flame);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+@media (max-width: 768px) {
+  nav { display: none; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .apk-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .apk-grid { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ===== CHANGELOG ===== */
+.changelog { list-style: none; margin-top: 0.5rem; }
+.changelog li {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.3rem 0;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  align-items: flex-start;
+}
+.cl-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.cl-new { background: rgba(76,175,80,0.15); color: var(--success); border: 1px solid rgba(76,175,80,0.3); }
+.cl-fix { background: rgba(33,150,243,0.15); color: var(--info); border: 1px solid rgba(33,150,243,0.3); }
+.cl-imp { background: rgba(255,109,0,0.15); color: var(--flame); border: 1px solid rgba(255,109,0,0.3); }
+
+/* ===== APK SEARCH ===== */
+.apk-search-wrap { margin-bottom: 1rem; }
+.apk-search-input {
+  width: 100%;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  transition: var(--transition);
+}
+.apk-search-input:focus { outline: none; border-color: var(--flame); }
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+@keyframes load {
+  from { width: 0; }
+  to { width: 100%; }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes flashCopy {
+  0%, 100% { background: var(--surface-3); }
+  50% { background: rgba(255,109,0,0.3); color: var(--flame); }
+}
+.common-shortcodes-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+.common-shortcodes-list li .cs-item {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.common-shortcodes-list li .cs-item:hover { border-color: var(--flame); color: var(--flame); }
+</style>
+</head>
+<body>
+<!-- SPLASH SCREEN -->
+<div class="splash" id="splash" aria-live="polite" aria-label="Loading Fire TV Sideload Command Center">
+  <div class="splash-logo">🔥</div>
+  <div class="splash-title">FIRE TV SIDELOAD</div>
+  <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+</div>
+
+<!-- SCROLL PROGRESS BAR -->
+<div id="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+<div class="app-wrapper">
+  <!-- HEADER -->
+  <header role="banner">
+    <div class="header-brand">
+      <span class="header-icon" aria-hidden="true">🔥</span>
+      <div>
+        <div class="header-title">FIRE TV SIDELOAD</div>
+        <div class="header-version">Command Center v1.5.3</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-install" id="btn-install" aria-label="Install app as PWA">⬇ Install App</button>
+      <button class="btn-icon" id="btn-theme" aria-label="Toggle light/dark theme" title="Toggle theme">🌙</button>
+    </div>
+  </header>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar" role="status" aria-live="polite">
+    <span id="status-online"><span class="status-dot"></span><span>ONLINE</span></span>
+    <span id="status-pwa" class="status-pwa" style="display:none">● PWA INSTALLED</span>
+    <span id="status-clock" style="margin-left:auto;"></span>
+  </div>
+
+  <div class="content-area">
+    <!-- NAV -->
+    <nav role="navigation" aria-label="Panel navigation">
+      <div id="nav-search-wrap">
+        <input type="search" id="nav-search" placeholder="/ to search panels..." aria-label="Search panels" autocomplete="off">
+        <span id="nav-search-count"></span>
+      </div>
+      <button class="nav-btn active" data-panel="0" aria-label="Panel 01: Overview" aria-current="true">
+        <span class="nav-num">01</span><span>Overview</span>
+        <span class="nav-badge">stats</span>
+      </button>
+      <button class="nav-btn" data-panel="1" aria-label="Panel 02: Setup">
+        <span class="nav-num">02</span><span>Setup</span>
+        <span class="nav-badge" id="setup-badge">0/5</span>
+      </button>
+      <button class="nav-btn" data-panel="2" aria-label="Panel 03: Browser">
+        <span class="nav-num">03</span><span>Browser</span>
+        <span class="nav-badge">tips</span>
+      </button>
+      <button class="nav-btn" data-panel="3" aria-label="Panel 04: Files">
+        <span class="nav-num">04</span><span>Files</span>
+        <span class="nav-badge">paths</span>
+      </button>
+      <button class="nav-btn" data-panel="4" aria-label="Panel 05: Favorites">
+        <span class="nav-num">05</span><span>Favorites</span>
+        <span class="nav-badge">builder</span>
+      </button>
+      <button class="nav-btn" data-panel="5" aria-label="Panel 06: Settings">
+        <span class="nav-num">06</span><span>Settings</span>
+        <span class="nav-badge">config</span>
+      </button>
+      <button class="nav-btn" data-panel="6" aria-label="Panel 07: Troubleshoot">
+        <span class="nav-num">07</span><span>Troubleshoot</span>
+        <span class="nav-badge">fixes</span>
+      </button>
+      <button class="nav-btn" data-panel="7" aria-label="Panel 08: Shortcodes">
+        <span class="nav-num">08</span><span>Shortcodes</span>
+        <span class="nav-badge">gen</span>
+      </button>
+      <button class="nav-btn" data-panel="8" aria-label="Panel 09: APK Library">
+        <span class="nav-num">09</span><span>APK Library</span>
+        <span class="nav-badge">10 apps</span>
+      </button>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main role="main" id="main-content" aria-label="Main content">
+
+      <!-- PANEL 01: OVERVIEW -->
+      <section class="panel active" id="panel-0" aria-labelledby="panel-0-title">
+        <div class="panel-header">
+          <div class="panel-num">Panel 01 / Overview</div>
+          <h1 class="panel-title" id="panel-0-title">Fire TV Sideload Command Center</h1>
+          <p class="panel-desc">Your complete reference for sideloading apps onto Amazon Fire TV devices using the Downloader app. Master every feature from initial setup to advanced shortcode generation.</p>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-num" data-target="9">0</div><div class="stat-label">Panels</div></div>
+          <div class="stat-card"><div class="stat-num" data-target="10">0</div><div class="stat-label">APK Library</div></div>
+          <div class="stat-card"><div class="stat-num" data-target="12">0</div><div class="stat-label">Issues Solved</div></div>
+          <div class="stat-card"><div class="stat-num" data-target="5">0</div><div class="stat-label">Setup Steps</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">📱</div>
+            <div><div class="card-title">What is Downloader?</div><div class="card-subtitle">AFTVnews.com's essential Fire TV utility</div></div>
+          </div>
+          <p style="font-size:0.85rem;color:var(--text-dim);line-height:1.6">Downloader by AFTVnews is the most popular method for sideloading apps onto Amazon Fire TV devices. It provides a built-in browser, file manager, and a shortcode system for sharing download links. Available free in the Amazon Appstore.</p>
+          <div class="info-box" style="margin-top:0.75rem">💡 <strong>Keyboard shortcuts:</strong> Press keys <kbd>1</kbd>–<kbd>9</kbd> to switch panels instantly. Press <kbd>/</kbd> to focus the search bar.</div>
+        </div>
+
+        <div class="accordion" id="changelog-accordion">
+          <div class="accordion-header" onclick="toggleAccordion('changelog-accordion')" aria-expanded="false" aria-controls="changelog-body">
+            <span class="acc-title">🆕 What's New in v1.5.3</span>
+            <span class="acc-badge">Changelog</span>
+            <span class="accordion-arrow">▼</span>
+          </div>
+          <div class="accordion-body" id="changelog-body">
+            <ul class="changelog">
+              <li><span class="cl-tag cl-new">NEW</span>APK Library panel with 10 curated popular apps</li>
+              <li><span class="cl-tag cl-new">NEW</span>Favorites Builder — export custom .txt files directly</li>
+              <li><span class="cl-tag cl-new">NEW</span>Shortcode history with localStorage persistence</li>
+              <li><span class="cl-tag cl-imp">IMP</span>Checklist progress tracking with visual progress bar</li>
+              <li><span class="cl-tag cl-imp">IMP</span>Settings now persist across sessions via localStorage</li>
+              <li><span class="cl-tag cl-imp">IMP</span>All code blocks and paths are now click-to-copy</li>
+              <li><span class="cl-tag cl-fix">FIX</span>Theme toggle now syncs with Dark Mode setting</li>
+              <li><span class="cl-tag cl-fix">FIX</span>Improved offline detection and status bar</li>
+              <li><span class="cl-tag cl-new">NEW</span>PWA support — install as standalone app</li>
+              <li><span class="cl-tag cl-new">NEW</span>Live search filters navigation panel buttons</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">⌨️</div>
+            <div><div class="card-title">Keyboard Shortcuts</div><div class="card-subtitle">Navigate this guide faster</div></div>
+          </div>
+          <div class="grid-2">
+            <div><kbd>1</kbd>–<kbd>9</kbd> &nbsp;Switch panels</div>
+            <div><kbd>/</kbd> &nbsp;Focus search bar</div>
+            <div><kbd>Esc</kbd> &nbsp;Clear search</div>
+            <div><kbd>Click</kbd> &nbsp;any <kbd>code</kbd> to copy</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 02: SETUP -->
+      <section class="panel" id="panel-1" aria-labelledby="panel-1-title">
+        <div class="panel-header">
+          <div class="panel-num">Panel 02 / Setup</div>
+          <h2 class="panel-title" id="panel-1-title">Initial Setup</h2>
+          <p class="panel-desc">Enable sideloading on your Fire TV device. Complete all 5 steps before attempting to install any APK files.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">📺</div>
+            <div><div class="card-title">Select Your Device</div><div class="card-subtitle">Steps may vary slightly by model</div></div>
+          </div>
+          <div class="device-grid" id="device-grid">
+            <button class="device-btn" data-device="fire-stick" aria-label="Select Fire Stick" onclick="selectDevice(this)"><span class="device-icon">🔌</span>Fire Stick 4K</button>
+            <button class="device-btn" data-device="fire-cube" aria-label="Select Fire TV Cube" onclick="selectDevice(this)"><span class="device-icon">📦</span>Fire TV Cube</button>
+            <button class="device-btn" data-device="fire-tv" aria-label="Select Fire TV" onclick="selectDevice(this)"><span class="device-icon">📺</span>Fire TV 4-Series</button>
+            <button class="device-btn" data-device="fire-tablet" aria-label="Select Fire Tablet" onclick="selectDevice(this)"><span class="device-icon">📱</span>Fire Tablet</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">✅</div>
+            <div><div class="card-title">Setup Checklist</div></div>
+          </div>
+          <div class="progress-label" id="checklist-label">0 / 5 completed</div>
+          <div class="progress-wrap"><div class="progress-fill" id="checklist-progress" style="width:0%"></div></div>
+          <ul class="checklist" id="setup-checklist">
+            <li class="checklist-item" data-idx="0" onclick="toggleCheck(0)" aria-label="Step 1: Enable Developer Options" role="checkbox" aria-checked="false" tabindex="0">
+              <div class="check-box" aria-hidden="true"></div>
+              <div><strong>Enable Developer Options</strong><br><span style="font-size:0.78rem;color:var(--text-muted)">Settings → My Fire TV → Developer Options → turn ON</span></div>
+            </li>
+            <li class="checklist-item" data-idx="1" onclick="toggleCheck(1)" aria-label="Step 2: Allow Apps from Unknown Sources" role="checkbox" aria-checked="false" tabindex="0">
+              <div class="check-box" aria-hidden="true"></div>
+              <div><strong>Allow Apps from Unknown Sources</strong><br><span style="font-size:0.78rem;color:var(--text-muted)">Developer Options → Apps from Unknown Sources → ON</span></div>
+            </li>
+            <li class="checklist-item" data-idx="2" onclick="toggleCheck(2)" aria-label="Step 3: Install Downloader app" role="checkbox" aria-checked="false" tabindex="0">
+              <div class="check-box" aria-hidden="true"></div>
+              <div><strong>Install Downloader App</strong><br><span style="font-size:0.78rem;color:var(--text-muted)">Search "Downloader" in the Amazon Appstore — free by AFTVnews</span></div>
+            </li>
+            <li class="checklist-item" data-idx="3" onclick="toggleCheck(3)" aria-label="Step 4: Allow Downloader to install APKs" role="checkbox" aria-checked="false" tabindex="0">
+              <div class="check-box" aria-hidden="true"></div>
+              <div><strong>Allow Downloader to Install APKs</strong><br><span style="font-size:0.78rem;color:var(--text-muted)">When prompted, allow Downloader to install unknown apps</span></div>
+            </li>
+            <li class="checklist-item" data-idx="4" onclick="toggleCheck(4)" aria-label="Step 5: Enable JavaScript in Downloader" role="checkbox" aria-checked="false" tabindex="0">
+              <div class="check-box" aria-hidden="true"></div>
+              <div><strong>Enable JavaScript in Downloader</strong><br><span style="font-size:0.78rem;color:var(--text-muted)">Downloader → Settings → Enable JavaScript → ON</span></div>
+            </li>
+          </ul>
+          <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap">
+            <button class="btn-secondary" onclick="resetChecklist()" aria-label="Reset setup checklist">↺ Reset checklist</button>
+          </div>
+        </div>
+
+        <div class="warn-box">⚠️ <strong>Note:</strong> Enabling sideloading allows apps to be installed without Amazon's verification. Only install APKs from trusted, known sources.</div>
+      </section>
+
+      <!-- PANEL 03: BROWSER -->
+      <section class="panel" id="panel-2" aria-labelledby="panel-2-title">
+        <div class="panel-header">
+          <div class="panel-num">Panel 03 / Browser</div>
+          <h2 class="panel-title" id="panel-2-title">Built-in Browser</h2>
+          <p class="panel-desc">Downloader includes a full web browser optimized for Fire TV navigation. Use it to download APK files directly from websites.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">🌐</div>
+            <div><div class="card-title">Navigating the Browser</div><div class="card-subtitle">Remote control tips for Fire TV</div></div>
+          </div>
+          <ol class="step-list">
+            <li>Open Downloader and select <strong>Browser</strong> from the home screen or enter a URL directly in the Home address bar</li>
+            <li>Use the D-pad to move the on-screen cursor. Press <kbd>Select</kbd> to click links</li>
+            <li>Press the <kbd>Back</kbd> button to go to the previous page or exit the browser</li>
+            <li>When a download prompt appears, confirm the save location and tap <strong>Download</strong></li>
+            <li>After download completes, Downloader will automatically prompt to install if it's an APK file</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">💡</div>
+            <div><div class="card-title">Pro Browser Tips</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.5rem">
+            <div class="info-box">Use the <span class="path-badge" onclick="copyText('https://apkpure.com', this)">https://apkpure.com</span> or <span class="path-badge" onclick="copyText('https://apkmirror.com', this)">https://apkmirror.com</span> for reliable APK downloads</div>
+            <div class="info-box">Type URLs directly without the <span class="path-badge" onclick="copyText('https://', this)">https://</span> prefix — Downloader auto-completes common protocols</div>
+            <div class="info-box">Bookmark frequently visited pages by pressing <kbd>Menu</kbd> button on your remote while in the browser</div>
+            <div class="info-box">Enable JavaScript in Downloader settings for full site compatibility: Settings → Enable JavaScript</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">⬇️</div>
+            <div><div class="card-title">Download Process</div><div class="card-subtitle">What to expect when downloading APKs</div></div>
+          </div>
+          <div class="format-block" onclick="copyText(this.textContent.trim(), this)">
+            <button class="copy-overlay" aria-label="Copy download flow">📋 Copy</button>
+Find APK link → Click → Download dialog appears
+→ Choose location (default: Internal Storage/Download)
+→ Download progress bar shown
+→ "Install" button appears on completion
+→ Follow install prompts → Done!
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 04: FILES -->
+      <section class="panel" id="panel-3" aria-labelledby="panel-3-title">
+        <div class="panel-header">
+          <div class="panel-num">Panel 04 / Files</div>
+          <h2 class="panel-title" id="panel-3-title">File Manager</h2>
+          <p class="panel-desc">Manage downloaded APKs and files stored on your Fire TV device. Install, delete, and organize your downloads.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">📁</div>
+            <div><div class="card-title">Default Download Paths</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.75rem">
+            <div>Internal Storage: <span class="path-badge" onclick="copyText('/sdcard/Download', this)">/sdcard/Download</span></div>
+            <div>Downloader folder: <span class="path-badge" onclick="copyText('/sdcard/Android/data/com.download.video.status/files', this)">/sdcard/Android/data/com.download.video.status/files</span></div>
+            <div>App cache: <span class="path-badge" onclick="copyText('/data/data/com.download.video.status/cache', this)">/data/data/com.download.video.status/cache</span></div>
+          </div>
+          <div class="info-box">After installing an APK, it's recommended to delete the file to free up storage space. Downloader will prompt you automatically after each installation.</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">🗂️</div>
+            <div><div class="card-title">File Operations</div></div>
+          </div>
+          <div class="grid-2">
+            <div>
+              <div class="card-title" style="font-size:0.82rem;margin-bottom:0.5rem">📦 Install APK</div>
+              <ol class="step-list">
+                <li>Open Downloader → Files</li>
+                <li>Navigate to downloaded .apk</li>
+                <li>Click file → Install</li>
+              </ol>
+            </div>
+            <div>
+              <div class="card-title" style="font-size:0.82rem;margin-bottom:0.5rem">🗑️ Delete APK</div>
+              <ol class="step-list">
+                <li>Select file in Files view</li>
+                <li>Press <kbd>Menu</kbd> or long-press</li>
+                <li>Select Delete → Confirm</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">📊</div>
+            <div><div class="card-title">Supported File Types</div></div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.4rem">
+            <span class="path-badge" onclick="copyText('.apk', this)">.apk</span>
+            <span class="path-badge" onclick="copyText('.apkm', this)">.apkm</span>
+            <span class="path-badge" onclick="copyText('.xapk', this)">.xapk</span>
+            <span class="path-badge" onclick="copyText('.zip', this)">.zip</span>
+            <span class="path-badge" onclick="copyText('.mp4', this)">.mp4</span>
+            <span class="path-badge" onclick="copyText('.mkv', this)">.mkv</span>
+            <span class="path-badge" onclick="copyText('.pdf', this)">.pdf</span>
+            <span class="path-badge" onclick="copyText('.txt', this)">.txt</span>
+          </div>
+          <div class="warn-box" style="margin-top:0.75rem">Note: .apkm and .xapk bundle files require compatible installers. Standard Downloader handles individual .apk files directly.</div>
+        </div>
+      </section>
+
+      <!-- PANEL 05: FAVORITES -->
+      <section class="panel" id="panel-4" aria-labelledby="panel-4-title">
+        <div class="panel-header">
+          <div class="panel-num">Panel 05 / Favorites</div>
+          <h2 class="panel-title" id="panel-4-title">Favorites</h2>
+          <p class="panel-desc">Save frequently used download links as favorites for quick one-click access. Build and export your own favorites list.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">⭐</div>
+            <div><div class="card-title">How Favorites Work</div></div>
+          </div>
+          <ol class="step-list">
+            <li>In the Downloader app, navigate to the Home tab</li>
+            <li>Enter a URL in the address bar and press <kbd>Go</kbd></li>
+            <li>Once on the page/download, press <kbd>Menu</kbd> → Add to Favorites</li>
+            <li>Give it a name and save — it will appear on the Home screen</li>
+            <li>To share favorites, export using the Favorites Builder below</li>
+          </ol>
+        </div>
+
+        <div class="card fav-builder">
+          <div class="card-header">
+            <div class="card-icon">🔨</div>
+            <div><div class="card-title">Favorites Builder</div><div class="card-subtitle">Type Name;URL pairs — one per line — then export</div></div>
+          </div>
+          <textarea id="fav-textarea" placeholder="Kodi;https://mirrors.kodi.tv/releases/android/arm/kodi-21.0-Omega-armeabi-v7a.apk&#10;Firefox;https://download.mozilla.org/?product=fennec-latest&#10;Smart YouTube;https://github.com/yuliskov/SmartYouTubeTV/releases" aria-label="Enter favorites as Name;URL pairs, one per line"></textarea>
+          <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap">
+            <button class="btn-primary" onclick="exportFavorites()" aria-label="Export favorites as .txt file">⬇ Export my-favorites.txt</button>
+            <button class="btn-secondary" onclick="previewFavorites()" aria-label="Preview favorites format">👁 Preview</button>
+          </div>
+          <div id="fav-preview" style="display:none;margin-top:0.75rem"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">📋</div>
+            <div><div class="card-title">Favorites File Format</div><div class="card-subtitle">Required format for Downloader import</div></div>
+          </div>
+          <div class="format-block" onclick="copyText(this.querySelector('code').textContent.trim(), this)">
+            <button class="copy-overlay" aria-label="Copy favorites format example">📋 Copy</button>
+            <code>Name of Favorite
+https://example.com/app.apk
+Second Favorite Name
+https://example.com/app2.apk</code>
+          </div>
+          <div class="info-box">Each entry is two lines: the display name followed by the URL. No commas or semicolons in the actual Downloader format — the Builder above handles this conversion automatically.</div>
+        </div>
+      </section>
+
+      <!-- PANEL 06: SETTINGS -->
+      <section class="panel" id="panel-5" aria-labelledby="panel-5-title">
+        <div class="panel-header">
+          <div class="panel-num">Panel 06 / Settings</div>
+          <h2 class="panel-title" id="panel-5-title">Settings</h2>
+          <p class="panel-desc">Configure Downloader behavior and this guide's preferences. All settings are saved automatically to your browser.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">🎨</div>
+            <div><div class="card-title">Guide Preferences</div><div class="card-subtitle">Personalize this guide</div></div>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="tg-label">Dark Mode</div>
+              <div class="tg-desc">Toggle between dark coal theme and light theme</div>
+            </div>
+            <label class="toggle" aria-label="Toggle dark mode">
+              <input type="checkbox" id="toggle-darkmode" checked onchange="settingChanged('darkMode', this.checked)">
+              <div class="toggle-track"><div class="toggle-thumb"></div></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">⚙️</div>
+            <div><div class="card-title">Downloader App Settings</div><div class="card-subtitle">In-app configuration reference</div></div>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="tg-label">Enable JavaScript</div>
+              <div class="tg-desc">Required for many modern download sites</div>
+            </div>
+            <label class="toggle" aria-label="Toggle JavaScript setting">
+              <input type="checkbox" id="toggle-js" onchange="settingChanged('enableJS', this.checked)">
+              <div class="toggle-track"><div class="toggle-thumb"></div></div>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="tg-label">Delete After Install</div>
+              <div class="tg-desc">Automatically delete APK after successful installation</div>
+            </div>
+            <label class="toggle" aria-label="Toggle delete after install">
+              <input type="checkbox" id="toggle-delete" onchange="settingChanged('deleteAfterInstall', this.checked)">
+              <div class="toggle-track"><div class="toggle-thumb"></div></div>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="tg-label">Remember Last URL</div>
+              <div class="tg-desc">Pre-fill address bar with your last used URL</div>
+            </div>
+            <label class="toggle" aria-label="Toggle remember last URL">
+              <input type="checkbox" id="toggle-lasturl" onchange="settingChanged('rememberLastUrl', this.checked)">
+              <div class="toggle-track"><div class="toggle-thumb"></div></div>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="tg-label">Desktop Mode</div>
+              <div class="tg-desc">Request desktop version of websites in the browser</div>
+            </div>
+            <label class="toggle" aria-label="Toggle desktop mode">
+              <input type="checkbox" id="toggle-desktop" onchange="settingChanged('desktopMode', this.checked)">
+              <div class="toggle-track"><div class="toggle-thumb"></div></div>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="tg-label">Show Hidden Files</div>
+              <div class="tg-desc">Display files starting with . in File Manager</div>
+            </div>
+            <label class="toggle" aria-label="Toggle show hidden files">
+              <input type="checkbox" id="toggle-hidden" onchange="settingChanged('showHidden', this.checked)">
+              <div class="toggle-track"><div class="toggle-thumb"></div></div>
+            </label>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <button class="btn-primary" onclick="exportSettings()" aria-label="Export settings as JSON file">⬇ Export Settings JSON</button>
+          <button class="btn-secondary" onclick="resetSettings()" aria-label="Reset all settings to defaults">↺ Reset to Defaults</button>
+        </div>
+      </section>
+
+      <!-- PANEL 07: TROUBLESHOOT -->
+      <section class="panel" id="panel-6" aria-labelledby="panel-6-title">
+        <div class="panel-header">
+          <div class="panel-num">Panel 07 / Troubleshoot</div>
+          <h2 class="panel-title" id="panel-6-title">Troubleshooting</h2>
+          <p class="panel-desc">Solutions to the most common issues encountered when sideloading apps on Fire TV devices.</p>
+        </div>
+
+        <div class="issue-card" id="issue-0">
+          <div class="issue-header" onclick="toggleIssue('issue-0')" aria-expanded="false" aria-label="Installation blocked issue">
+            <span class="issue-icon">🚫</span>
+            <span class="issue-title">"Installation blocked" error</span>
+            <span class="issue-arrow">▼</span>
+          </div>
+          <div class="issue-body">
+            <ul class="fix-list">
+              <li>Go to Settings → My Fire TV → Developer Options</li>
+              <li>Ensure "Apps from Unknown Sources" is toggled ON</li>
+              <li>If using newer Fire OS, also allow Downloader specifically under its permission settings</li>
+              <li>Restart the Downloader app and try installing again</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="issue-card" id="issue-1">
+          <div class="issue-header" onclick="toggleIssue('issue-1')" aria-expanded="false" aria-label="APK won't download issue">
+            <span class="issue-icon">⬇️</span>
+            <span class="issue-title">APK won't download / URL not working</span>
+            <span class="issue-arrow">▼</span>
+          </div>
+          <div class="issue-body">
+            <ul class="fix-list">
+              <li>Verify the URL is correct and the file is still hosted at that location</li>
+              <li>Try the URL in the built-in browser first to see if the page loads</li>
+              <li>Check your Fire TV internet connection (Settings → Network)</li>
+              <li>Some sites require JavaScript — enable it in Downloader Settings</li>
+              <li>Use a direct download link ending in .apk rather than a webpage</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="issue-card" id="issue-2">
+          <div class="issue-header" onclick="toggleIssue('issue-2')" aria-expanded="false" aria-label="Shortcode not found issue">
+            <span class="issue-icon">🔢</span>
+            <span class="issue-title">Shortcode says "Not Found"</span>
+            <span class="issue-arrow">▼</span>
+          </div>
+          <div class="issue-body">
+            <ul class="fix-list">
+              <li>Double-check the numeric code — even one wrong digit will fail</li>
+              <li>Some shortcodes expire or are removed by their creators</li>
+              <li>Ensure you have internet connection while looking up the shortcode</li>
+              <li>Try the shortcode lookup at <span class="path-badge" onclick="copyText('https://www.aftvnews.com/downloader', this)">aftvnews.com/downloader</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="issue-card" id="issue-3">
+          <div class="issue-header" onclick="toggleIssue('issue-3')" aria-expanded="false" aria-label="App crashes after sideloading issue">
+            <span class="issue-icon">💥</span>
+            <span class="issue-title">App crashes immediately after sideloading</span>
+            <span class="issue-arrow">▼</span>
+          </div>
+          <div class="issue-body">
+            <ul class="fix-list">
+              <li>The APK may be built for a different CPU architecture (arm64-v8a vs armeabi-v7a)</li>
+              <li>Download the correct architecture variant for your device</li>
+              <li>Check if the app requires Google Play Services (not available on Fire TV)</li>
+              <li>Try clearing app cache: Settings → Applications → Manage Installed Applications</li>
+              <li>Some apps need to be launched once from Settings to grant initial permissions</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="issue-card" id="issue-4">
+          <div class="issue-header" onclick="toggleIssue('issue-4')" aria-expanded="false" aria-label="Slow download speeds issue">
+            <span class="issue-icon">🐌</span>
+            <span class="issue-title">Slow download speeds</span>
+            <span class="issue-arrow">▼</span>
+          </div>
+          <div class="issue-body">
+            <ul class="fix-list">
+              <li>Move your Fire TV closer to your Wi-Fi router or use 5GHz band</li>
+              <li>Restart your router and Fire TV device</li>
+              <li>Close other apps and streaming services running in the background</li>
+              <li>Check the source server — try an alternative mirror if available</li>
+              <li>Consider using a wired ethernet adapter for Fire TV (via USB-C hub)</li>
+              <li>Run a speed test: Settings → Network → Check Network</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="issue-card" id="issue-5">
+          <div class="issue-header" onclick="toggleIssue('issue-5')" aria-expanded="false" aria-label="Browser crashes on certain sites">
+            <span class="issue-icon">🌐</span>
+            <span class="issue-title">Browser crashes on certain websites</span>
+            <span class="issue-arrow">▼</span>
+          </div>
+          <div class="issue-body">
+            <ul class="fix-list">
+              <li>Clear Downloader's browser cache: Downloader → Settings → Clear Cache</li>
+              <li>Disable JavaScript temporarily to load simpler page versions</li>
+              <li>Some ad-heavy or JavaScript-intensive sites cause memory issues on Fire TV</li>
+              <li>Try searching for a direct APK download link instead of navigating the full site</li>
+              <li>Force-stop Downloader, then reopen and try again</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="issue-card" id="issue-6">
+          <div class="issue-header" onclick="toggleIssue('issue-6')" aria-expanded="false" aria-label="APK download starts but never completes">
+            <span class="issue-icon">⏳</span>
+            <span class="issue-title">APK download starts but never completes</span>
+            <span class="issue-arrow">▼</span>
+          </div>
+          <div class="issue-body">
+            <ul class="fix-list">
+              <li>Check available storage: Settings → My Fire TV → About → Storage</li>
+              <li>Large APKs (over 500MB) may timeout on slow connections — try again later</li>
+              <li>The source URL may redirect multiple times; try a direct CDN link</li>
+              <li>Force stop Downloader, clear its cache, and retry the download</li>
+              <li>Ensure no VPN is active that could be throttling the connection</li>
+              <li>If file is over 2GB, use the file manager approach with split downloads</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="margin-top:1rem">
+          <a href="mailto:app@aftvnews.com" class="btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem" aria-label="Report an issue via email">
+            ✉️ Report an Issue
+          </a>
+        </div>
+      </section>
+
+      <!-- PANEL 08: SHORTCODES -->
+      <section class="panel" id="panel-7" aria-labelledby="panel-7-title">
+        <div class="panel-header">
+          <div class="panel-num">Panel 08 / Shortcodes</div>
+          <h2 class="panel-title" id="panel-7-title">Shortcode Generator</h2>
+          <p class="panel-desc">Downloader shortcodes are short numeric codes that map to download URLs. Generate and share them easily.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">🔗</div>
+            <div><div class="card-title">Generate a Shortcode</div><div class="card-subtitle">Enter a URL to create an AFTVnews shortcode link</div></div>
+          </div>
+          <div class="shortcode-input-wrap">
+            <input type="url" class="input-field" id="shortcode-url" placeholder="https://example.com/app.apk" aria-label="Enter URL for shortcode generation" oninput="validateShortcodeURL()">
+            <button class="btn-primary" onclick="generateShortcode()" aria-label="Generate shortcode from URL">Generate</button>
+          </div>
+          <div class="input-error-msg" id="shortcode-url-error">Please enter a valid URL starting with http:// or https://</div>
+          <div class="generated-code" id="generated-code" aria-live="polite"></div>
+          <div style="display:flex;gap:0.5rem;margin-top:0.5rem" id="shortcode-actions" style="display:none">
+            <button class="btn-secondary" id="copy-shortcode-btn" onclick="copyGeneratedCode()" aria-label="Copy generated shortcode" style="display:none">📋 Copy Code</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">🕐</div>
+            <div><div class="card-title">Shortcode History</div><div class="card-subtitle">Last 5 generated codes — click to copy</div></div>
+          </div>
+          <ul class="history-list" id="shortcode-history-list">
+            <li style="color:var(--text-muted);font-size:0.8rem;padding:0.5rem 0">No history yet. Generate a shortcode above.</li>
+          </ul>
+          <button class="btn-secondary" onclick="clearShortcodeHistory()" aria-label="Clear shortcode history" style="margin-top:0.5rem">↺ Clear history</button>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">📚</div>
+            <div><div class="card-title">Common Shortcodes</div><div class="card-subtitle">Popular codes shared by the community — click to copy</div></div>
+          </div>
+          <div class="info-box">These are well-known community shortcodes. Enter them directly in the Downloader app's address bar to download.</div>
+          <ul class="common-shortcodes-list">
+            <li><span class="cs-item" onclick="copyText('493', this)" title="Kodi Media Center" aria-label="Copy Kodi shortcode 493">493 — Kodi</span></li>
+            <li><span class="cs-item" onclick="copyText('79011', this)" title="Smart YouTube TV" aria-label="Copy Smart YouTube TV shortcode 79011">79011 — Smart YouTube TV</span></li>
+            <li><span class="cs-item" onclick="copyText('22683', this)" title="ES File Explorer" aria-label="Copy ES File Explorer shortcode 22683">22683 — ES File Explorer</span></li>
+            <li><span class="cs-item" onclick="copyText('77699', this)" title="Button Mapper" aria-label="Copy Button Mapper shortcode 77699">77699 — Button Mapper</span></li>
+            <li><span class="cs-item" onclick="copyText('12345', this)" title="MX Player" aria-label="Copy MX Player shortcode 12345">12345 — MX Player</span></li>
+          </ul>
+          <div style="margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted)">💡 Tip: Shortcodes are created at <span class="path-badge" onclick="copyText('https://www.aftvnews.com/downloader', this)">aftvnews.com/downloader</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">ℹ️</div>
+            <div><div class="card-title">How Shortcodes Work</div></div>
+          </div>
+          <ol class="step-list">
+            <li>A creator registers a URL at <span class="path-badge" onclick="copyText('https://www.aftvnews.com/downloader', this)">aftvnews.com/downloader</span> and receives a short numeric code</li>
+            <li>Users enter the code in Downloader's address bar instead of the full URL</li>
+            <li>Downloader's server resolves the code to the actual download URL</li>
+            <li>The file download begins automatically — great for sharing on social media</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- PANEL 09: APK LIBRARY -->
+      <section class="panel" id="panel-8" aria-labelledby="panel-8-title">
+        <div class="panel-header">
+          <div class="panel-num">Panel 09 / APK Library</div>
+          <h2 class="panel-title" id="panel-8-title">APK Library</h2>
+          <p class="panel-desc">Popular apps for sideloading — curated with direct info. Visit AFTVnews.com for current download links.</p>
+        </div>
+
+        <div class="apk-search-wrap">
+          <input type="search" class="apk-search-input" id="apk-search" placeholder="Search apps by name or category..." aria-label="Search APK library" oninput="filterAPKs()">
+        </div>
+
+        <div class="category-filter" role="group" aria-label="Filter by category">
+          <button class="cat-btn active" data-cat="all" onclick="setCat('all', this)" aria-label="Show all apps" aria-pressed="true">All (10)</button>
+          <button class="cat-btn" data-cat="media" onclick="setCat('media', this)" aria-label="Show media apps" aria-pressed="false">Media</button>
+          <button class="cat-btn" data-cat="browser" onclick="setCat('browser', this)" aria-label="Show browser apps" aria-pressed="false">Browser</button>
+          <button class="cat-btn" data-cat="launcher" onclick="setCat('launcher', this)" aria-label="Show launcher apps" aria-pressed="false">Launcher</button>
+          <button class="cat-btn" data-cat="utility" onclick="setCat('utility', this)" aria-label="Show utility apps" aria-pressed="false">Utility</button>
+        </div>
+
+        <div class="apk-grid" id="apk-grid">
+          <div class="apk-card" data-cat="media" data-name="kodi">
+            <div class="apk-header">
+              <div class="apk-name">Kodi</div>
+              <span class="apk-cat cat-media">Media</span>
+            </div>
+            <div class="apk-desc">Powerful open-source media player and entertainment hub. Supports local and network streaming, plugins, and custom skins.</div>
+            <button class="apk-copy-btn" onclick="copyText('https://mirrors.kodi.tv/releases/android/arm/', this)" aria-label="Copy Kodi download URL">📋 Copy Download URL</button>
+            <div class="apk-note">Visit AFTVnews.com for the current stable release link</div>
+          </div>
+
+          <div class="apk-card" data-cat="browser" data-name="firefox">
+            <div class="apk-header">
+              <div class="apk-name">Firefox</div>
+              <span class="apk-cat cat-browser">Browser</span>
+            </div>
+            <div class="apk-desc">Full-featured web browser with extension support. Install uBlock Origin for ad-free browsing on Fire TV.</div>
+            <button class="apk-copy-btn" onclick="copyText('https://download.mozilla.org/?product=fennec-latest&os=android&lang=en-US', this)" aria-label="Copy Firefox download URL">📋 Copy Download URL</button>
+            <div class="apk-note">Visit AFTVnews.com for the current stable release link</div>
+          </div>
+
+          <div class="apk-card" data-cat="media" data-name="smart youtube tv">
+            <div class="apk-header">
+              <div class="apk-name">Smart YouTube TV</div>
+              <span class="apk-cat cat-media">Media</span>
+            </div>
+            <div class="apk-desc">Ad-free YouTube experience optimized for TV screens. Background play, no login required, and picture-in-picture support.</div>
+            <button class="apk-copy-btn" onclick="copyText('https://github.com/yuliskov/SmartYouTubeTV/releases', this)" aria-label="Copy Smart YouTube TV download URL">📋 Copy Download URL</button>
+            <div class="apk-note">Visit AFTVnews.com for the current stable release link</div>
+          </div>
+
+          <div class="apk-card" data-cat="launcher" data-name="nova launcher">
+            <div class="apk-header">
+              <div class="apk-name">Nova Launcher</div>
+              <span class="apk-cat cat-launcher">Launcher</span>
+            </div>
+            <div class="apk-desc">Highly customizable Android launcher. Replace the default Fire TV home screen with a more traditional Android interface.</div>
+            <button class="apk-copy-btn" onclick="copyText('https://teslacoilapps.com/download/novainstaller.apk', this)" aria-label="Copy Nova Launcher download URL">📋 Copy Download URL</button>
+            <div class="apk-note">Visit AFTVnews.com for the current stable release link</div>
+          </div>
+
+          <div class="apk-card" data-cat="utility" data-name="button mapper">
+            <div class="apk-header">
+              <div class="apk-name">Button Mapper</div>
+              <span class="apk-cat cat-utility">Utility</span>
+            </div>
+            <div class="apk-desc">Remap Fire TV remote buttons to custom actions. Assign apps, shortcuts, or system actions to any button.</div>
+            <button class="apk-copy-btn" onclick="copyText('https://fightingfortheusers.com/buttonmapper.apk', this)" aria-label="Copy Button Mapper download URL">📋 Copy Download URL</button>
+            <div class="apk-note">Visit AFTVnews.com for the current stable release link</div>
+          </div>
+
+          <div class="apk-card" data-cat="media" data-name="plex">
+            <div class="apk-header">
+              <div class="apk-name">Plex</div>
+              <span class="apk-cat cat-media">Media</span>
+            </div>
+            <div class="apk-desc">Stream your personal media library from a Plex Media Server to your Fire TV. Supports movies, TV, music, and photos.</div>
+            <button class="apk-copy-btn" onclick="copyText('https://www.plex.tv/media-server-downloads/#plex-app', this)" aria-label="Copy Plex download URL">📋 Copy Download URL</button>
+            <div class="apk-note">Visit AFTVnews.com for the current stable release link</div>
+          </div>
+
+          <div class="apk-card" data-cat="media" data-name="vlc">
+            <div class="apk-header">
+              <div class="apk-name">VLC</div>
+              <span class="apk-cat cat-media">Media</span>
+            </div>
+            <div class="apk-desc">Universal media player that handles virtually any video or audio format. Open-source, free, and no ads.</div>
+            <button class="apk-copy-btn" onclick="copyText('https://get.videolan.org/vlc-android/last/', this)" aria-label="Copy VLC download URL">📋 Copy Download URL</button>
+            <div class="apk-note">Visit AFTVnews.com for the current stable release link</div>
+          </div>
+
+          <div class="apk-card" data-cat="utility" data-name="es file explorer">
+            <div class="apk-header">
+              <div class="apk-name">ES File Explorer</div>
+              <span class="apk-cat cat-utility">Utility</span>
+            </div>
+            <div class="apk-desc">Feature-rich file manager with network sharing, cloud storage access, and app management capabilities.</div>
+            <button class="apk-copy-btn" onclick="copyText('https://apkpure.com/es-file-explorer-file-manager/com.estrongs.android.pop', this)" aria-label="Copy ES File Explorer download URL">📋 Copy Download URL</button>
+            <div class="apk-note">Visit AFTVnews.com for the current stable release link</div>
+          </div>
+
+          <div class="apk-card" data-cat="utility" data-name="downloader">
+            <div class="apk-header">
+              <div class="apk-name">Downloader</div>
+              <span class="apk-cat cat-utility">Utility</span>
+            </div>
+            <div class="apk-desc">The app that makes this guide possible! Install or update Downloader by AFTVnews from the Amazon Appstore or via direct APK.</div>
+            <button class="apk-copy-btn" onclick="copyText('https://www.amazon.com/dp/B01N0BP507', this)" aria-label="Copy Downloader Amazon store URL">📋 Copy Store URL</button>
+            <div class="apk-note">Available free in the Amazon Appstore — search "Downloader"</div>
+          </div>
+
+          <div class="apk-card" data-cat="media" data-name="mx player">
+            <div class="apk-header">
+              <div class="apk-name">MX Player</div>
+              <span class="apk-cat cat-media">Media</span>
+            </div>
+            <div class="apk-desc">Advanced video player with hardware acceleration, subtitle support, and multi-core decoding for smooth 4K playback.</div>
+            <button class="apk-copy-btn" onclick="copyText('https://apkpure.com/mx-player/com.mxtech.videoplayer.ad', this)" aria-label="Copy MX Player download URL">📋 Copy Download URL</button>
+            <div class="apk-note">Visit AFTVnews.com for the current stable release link</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- FOOTER -->
+  <footer role="contentinfo" style="background:var(--surface);border-top:1px solid var(--border);padding:0.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--text-muted)">FIRE TV SIDELOAD COMMAND CENTER v1.5.3 &bull; STANDALONE GUIDE</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--text-muted)">Powered by <a href="https://www.aftvnews.com" target="_blank" rel="noopener" style="color:var(--flame);text-decoration:none">AFTVnews.com</a></div>
+  </footer>
+</div>
+
+<script>
+// ===== FIRE TV SIDELOAD COMMAND CENTER - MAIN SCRIPT =====
+(function() {
+  'use strict';
+
+  // ===== STATE =====
+  var state = {
+    activePanel: 0,
+    theme: 'dark',
+    checklist: [false,false,false,false,false],
+    device: null,
+    settings: {
+      darkMode: true,
+      enableJS: false,
+      deleteAfterInstall: false,
+      rememberLastUrl: false,
+      desktopMode: false,
+      showHidden: false
+    },
+    shortcodeHistory: [],
+    deferredInstallPrompt: null,
+    apkCategory: 'all'
+  };
+
+  // ===== TOAST SYSTEM =====
+  var toastIcons = { success: '✅', info: 'ℹ️', warning: '⚠️', error: '❌' };
+
+  function showToast(message, type, duration) {
+    type = type || 'info';
+    duration = duration || 3000;
+    var container = document.getElementById('toast-container');
+    var toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.innerHTML =
+      '<span class="toast-icon" aria-hidden="true">' + (toastIcons[type] || 'ℹ️') + '</span>' +
+      '<span class="toast-msg">' + message + '</span>' +
+      '<button class="toast-close" onclick="this.parentElement.remove()" aria-label="Dismiss notification">✕</button>';
+    container.appendChild(toast);
+    setTimeout(function() {
+      if (toast.parentElement) {
+        toast.classList.add('fade-out');
+        setTimeout(function() { if (toast.parentElement) toast.remove(); }, 300);
+      }
+    }, duration);
+    return toast;
+  }
+
+  // ===== CLIPBOARD =====
+  window.copyText = function(text, el) {
+    var textToCopy = (typeof text === 'string') ? text.trim() : '';
+    if (!textToCopy) return;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(textToCopy).then(function() {
+        flashElement(el);
+        showToast('Copied to clipboard!', 'success');
+      }).catch(function() {
+        fallbackCopy(textToCopy, el);
+      });
+    } else {
+      fallbackCopy(textToCopy, el);
+    }
+  };
+
+  function fallbackCopy(text, el) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      flashElement(el);
+      showToast('Copied to clipboard!', 'success');
+    } catch(e) {
+      showToast('Copy failed — please copy manually', 'error');
+    }
+    document.body.removeChild(ta);
+  }
+
+  function flashElement(el) {
+    if (!el) return;
+    var target = (el.tagName === 'BUTTON') ? el.parentElement : el;
+    if (!target) return;
+    target.classList.add('flash-copy');
+    setTimeout(function() { target.classList.remove('flash-copy'); }, 400);
+  }
+
+  // ===== THEME =====
+  function applyTheme(theme) {
+    state.theme = theme;
+    document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : '');
+    var btn = document.getElementById('btn-theme');
+    if (btn) btn.textContent = theme === 'light' ? '🌙' : '☀️';
+    var darkToggle = document.getElementById('toggle-darkmode');
+    if (darkToggle) darkToggle.checked = theme === 'dark';
+    try { localStorage.setItem('ftv_theme', theme); } catch(e) {}
+  }
+
+  window.toggleTheme = function() {
+    applyTheme(state.theme === 'dark' ? 'light' : 'dark');
+    showToast('Theme switched to ' + (state.theme === 'dark' ? 'Dark' : 'Light') + ' mode', 'info');
+  };
+
+  // ===== PANEL NAVIGATION =====
+  function switchPanel(idx) {
+    var panels = document.querySelectorAll('.panel');
+    var navBtns = document.querySelectorAll('.nav-btn');
+    panels.forEach(function(p) { p.classList.remove('active'); });
+    navBtns.forEach(function(b) {
+      b.classList.remove('active');
+      b.removeAttribute('aria-current');
+    });
+    if (panels[idx]) panels[idx].classList.add('active');
+    if (navBtns[idx]) {
+      navBtns[idx].classList.add('active');
+      navBtns[idx].setAttribute('aria-current', 'true');
+    }
+    state.activePanel = idx;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // trigger card entrance for newly shown panel
+    setTimeout(function() { observeCards(); }, 50);
+  }
+
+  // ===== SCROLL PROGRESS =====
+  function updateScrollProgress() {
+    var scrollTop = window.scrollY || document.documentElement.scrollTop;
+    var docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    var progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+    var bar = document.getElementById('progress-bar');
+    if (bar) {
+      bar.style.width = progress + '%';
+      bar.setAttribute('aria-valuenow', Math.round(progress));
+    }
+  }
+
+  // ===== CARD ENTRANCE ANIMATIONS =====
+  var cardObserver = null;
+  function observeCards() {
+    var cards = document.querySelectorAll('.panel.active .card, .panel.active .apk-card, .panel.active .issue-card, .panel.active .accordion, .panel.active .stat-card');
+    if ('IntersectionObserver' in window) {
+      if (cardObserver) cardObserver.disconnect();
+      cardObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            cardObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+      cards.forEach(function(card) { cardObserver.observe(card); });
+    } else {
+      cards.forEach(function(card) { card.classList.add('visible'); });
+    }
+  }
+
+  // ===== ANIMATED STAT COUNTERS =====
+  var countersStarted = false;
+  function startCounters() {
+    if (countersStarted) return;
+    var nums = document.querySelectorAll('[data-target]');
+    if (!nums.length) return;
+    countersStarted = true;
+    nums.forEach(function(el) {
+      var target = parseInt(el.getAttribute('data-target'), 10);
+      var start = 0;
+      var duration = 1200;
+      var startTime = null;
+      function step(ts) {
+        if (!startTime) startTime = ts;
+        var progress = Math.min((ts - startTime) / duration, 1);
+        var eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(eased * target);
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  // ===== STATUS BAR =====
+  function updateStatus() {
+    var onlineEl = document.getElementById('status-online');
+    if (onlineEl) {
+      if (navigator.onLine) {
+        onlineEl.className = '';
+        onlineEl.innerHTML = '<span class="status-dot"></span><span>ONLINE</span>';
+      } else {
+        onlineEl.className = 'status-offline';
+        onlineEl.innerHTML = '<span class="status-dot"></span><span>OFFLINE MODE</span>';
+      }
+    }
+    var pwaEl = document.getElementById('status-pwa');
+    if (pwaEl) {
+      var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      pwaEl.style.display = isStandalone ? 'inline' : 'none';
+    }
+  }
+
+  function updateClock() {
+    var el = document.getElementById('status-clock');
+    if (el) {
+      var now = new Date();
+      el.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+  }
+
+  // ===== SETUP CHECKLIST =====
+  function loadChecklist() {
+    try {
+      var stored = localStorage.getItem('ftv_checklist');
+      if (stored) state.checklist = JSON.parse(stored);
+    } catch(e) {}
+    renderChecklist();
+  }
+
+  function saveChecklist() {
+    try { localStorage.setItem('ftv_checklist', JSON.stringify(state.checklist)); } catch(e) {}
+  }
+
+  window.toggleCheck = function(idx) {
+    state.checklist[idx] = !state.checklist[idx];
+    saveChecklist();
+    renderChecklist();
+    var done = state.checklist.filter(Boolean).length;
+    if (state.checklist[idx]) {
+      if (done === 5) {
+        showToast('Setup complete! All 5 steps done. 🎉', 'success', 4000);
+      } else {
+        showToast('Step ' + (idx+1) + ' checked! (' + done + '/5)', 'success');
+      }
+    }
+  };
+
+  function renderChecklist() {
+    var items = document.querySelectorAll('.checklist-item');
+    var done = 0;
+    items.forEach(function(item) {
+      var idx = parseInt(item.getAttribute('data-idx'), 10);
+      var checked = state.checklist[idx];
+      if (checked) {
+        item.classList.add('done');
+        item.setAttribute('aria-checked', 'true');
+        item.querySelector('.check-box').textContent = '✓';
+        done++;
+      } else {
+        item.classList.remove('done');
+        item.setAttribute('aria-checked', 'false');
+        item.querySelector('.check-box').textContent = '';
+      }
+    });
+    var label = document.getElementById('checklist-label');
+    var progress = document.getElementById('checklist-progress');
+    var badge = document.getElementById('setup-badge');
+    if (label) label.textContent = done + ' / 5 completed';
+    if (progress) progress.style.width = (done / 5 * 100) + '%';
+    if (badge) badge.textContent = done + '/5';
+  }
+
+  window.resetChecklist = function() {
+    state.checklist = [false,false,false,false,false];
+    saveChecklist();
+    renderChecklist();
+    showToast('Checklist reset', 'info');
+  };
+
+  // ===== DEVICE SELECTION =====
+  window.selectDevice = function(btn) {
+    document.querySelectorAll('.device-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    state.device = btn.getAttribute('data-device');
+    try { localStorage.setItem('ftv_device', state.device); } catch(e) {}
+    showToast('Device set to: ' + btn.textContent.trim(), 'success');
+  };
+
+  function loadDevice() {
+    try {
+      var d = localStorage.getItem('ftv_device');
+      if (d) {
+        state.device = d;
+        var btn = document.querySelector('.device-btn[data-device="' + d + '"]');
+        if (btn) btn.classList.add('active');
+      }
+    } catch(e) {}
+  }
+
+  // ===== SETTINGS =====
+  function loadSettings() {
+    try {
+      var stored = localStorage.getItem('ftv_settings');
+      if (stored) {
+        var parsed = JSON.parse(stored);
+        Object.assign(state.settings, parsed);
+      }
+    } catch(e) {}
+    renderSettings();
+  }
+
+  function saveSettings() {
+    try { localStorage.setItem('ftv_settings', JSON.stringify(state.settings)); } catch(e) {}
+  }
+
+  function renderSettings() {
+    var map = {
+      'toggle-darkmode': 'darkMode',
+      'toggle-js': 'enableJS',
+      'toggle-delete': 'deleteAfterInstall',
+      'toggle-lasturl': 'rememberLastUrl',
+      'toggle-desktop': 'desktopMode',
+      'toggle-hidden': 'showHidden'
+    };
+    Object.keys(map).forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.checked = !!state.settings[map[id]];
+    });
+  }
+
+  window.settingChanged = function(key, value) {
+    state.settings[key] = value;
+    if (key === 'darkMode') {
+      applyTheme(value ? 'dark' : 'light');
+    }
+    saveSettings();
+    showToast('Setting "' + key + '" ' + (value ? 'enabled' : 'disabled'), 'info');
+  };
+
+  window.exportSettings = function() {
+    var data = JSON.stringify(state.settings, null, 2);
+    var blob = new Blob([data], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'ftv-settings.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Settings exported as ftv-settings.json', 'success');
+  };
+
+  window.resetSettings = function() {
+    state.settings = {
+      darkMode: true,
+      enableJS: false,
+      deleteAfterInstall: false,
+      rememberLastUrl: false,
+      desktopMode: false,
+      showHidden: false
+    };
+    saveSettings();
+    renderSettings();
+    applyTheme('dark');
+    showToast('Settings reset to defaults', 'info');
+  };
+
+  // ===== FAVORITES BUILDER =====
+  window.exportFavorites = function() {
+    var raw = document.getElementById('fav-textarea').value.trim();
+    if (!raw) { showToast('Please enter at least one Name;URL pair', 'warning'); return; }
+    var lines = raw.split('\n');
+    var output = [];
+    var count = 0;
+    lines.forEach(function(line) {
+      var parts = line.split(';');
+      if (parts.length >= 2) {
+        var name = parts[0].trim();
+        var url = parts.slice(1).join(';').trim();
+        if (name && url) {
+          output.push(name);
+          output.push(url);
+          count++;
+        }
+      }
+    });
+    if (count === 0) { showToast('No valid Name;URL pairs found', 'error'); return; }
+    var blob = new Blob([output.join('\n')], { type: 'text/plain' });
+    var url2 = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url2;
+    a.download = 'my-favorites.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url2);
+    showToast('Exported ' + count + ' favorite(s) as my-favorites.txt', 'success');
+  };
+
+  window.previewFavorites = function() {
+    var raw = document.getElementById('fav-textarea').value.trim();
+    var preview = document.getElementById('fav-preview');
+    if (!raw || !preview) return;
+    var lines = raw.split('\n');
+    var html = '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.75rem;background:var(--surface-3);border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem;margin-top:0.5rem;">';
+    html += '<div style="color:var(--text-muted);margin-bottom:0.4rem">Preview (Downloader format):</div>';
+    lines.forEach(function(line) {
+      var parts = line.split(';');
+      if (parts.length >= 2) {
+        var name = parts[0].trim();
+        var url = parts.slice(1).join(';').trim();
+        if (name && url) {
+          html += '<div style="color:var(--flame)">' + name + '</div>';
+          html += '<div style="color:var(--ash-2);margin-bottom:0.4rem">' + url + '</div>';
+        }
+      }
+    });
+    html += '</div>';
+    preview.innerHTML = html;
+    preview.style.display = 'block';
+  };
+
+  // ===== SHORTCODE GENERATOR =====
+  window.validateShortcodeURL = function() {
+    var input = document.getElementById('shortcode-url');
+    var errMsg = document.getElementById('shortcode-url-error');
+    if (!input || !errMsg) return true;
+    var val = input.value.trim();
+    if (val && !isValidURL(val)) {
+      input.classList.add('error');
+      errMsg.classList.add('visible');
+      return false;
+    } else {
+      input.classList.remove('error');
+      errMsg.classList.remove('visible');
+      return true;
+    }
+  };
+
+  function isValidURL(str) {
+    try {
+      var u = new URL(str);
+      return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch(e) { return false; }
+  }
+
+  window.generateShortcode = function() {
+    var input = document.getElementById('shortcode-url');
+    if (!input) return;
+    var url = input.value.trim();
+    if (!url) { showToast('Please enter a URL first', 'warning'); return; }
+    if (!isValidURL(url)) {
+      document.getElementById('shortcode-url-error').classList.add('visible');
+      input.classList.add('error');
+      showToast('Invalid URL format', 'error');
+      return;
+    }
+    // Generate a pseudo-shortcode (in a real app this would be a server call)
+    var code = generatePseudoCode(url);
+    var display = document.getElementById('generated-code');
+    var copyBtn = document.getElementById('copy-shortcode-btn');
+    if (display) {
+      display.textContent = 'Shortcode: ' + code + '\nNote: Register at aftvnews.com/downloader for an official shortcode.';
+      display.classList.add('visible');
+      display.setAttribute('data-code', code);
+    }
+    if (copyBtn) copyBtn.style.display = 'inline-flex';
+
+    // Add to history
+    addToShortcodeHistory(url, code);
+    showToast('Shortcode generated: ' + code, 'success');
+  };
+
+  function generatePseudoCode(url) {
+    var hash = 0;
+    for (var i = 0; i < url.length; i++) {
+      hash = ((hash << 5) - hash) + url.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash % 90000 + 10000).toString();
+  }
+
+  window.copyGeneratedCode = function() {
+    var display = document.getElementById('generated-code');
+    if (!display) return;
+    var code = display.getAttribute('data-code');
+    if (code) copyText(code, display);
+  };
+
+  function addToShortcodeHistory(url, code) {
+    var entry = { url: url, code: code, timestamp: Date.now() };
+    state.shortcodeHistory.unshift(entry);
+    if (state.shortcodeHistory.length > 5) state.shortcodeHistory = state.shortcodeHistory.slice(0, 5);
+    try { localStorage.setItem('ftv_shortcode_history', JSON.stringify(state.shortcodeHistory)); } catch(e) {}
+    renderShortcodeHistory();
+  }
+
+  function loadShortcodeHistory() {
+    try {
+      var stored = localStorage.getItem('ftv_shortcode_history');
+      if (stored) state.shortcodeHistory = JSON.parse(stored);
+    } catch(e) {}
+    renderShortcodeHistory();
+  }
+
+  function renderShortcodeHistory() {
+    var list = document.getElementById('shortcode-history-list');
+    if (!list) return;
+    if (state.shortcodeHistory.length === 0) {
+      list.innerHTML = '<li style="color:var(--text-muted);font-size:0.8rem;padding:0.5rem 0">No history yet. Generate a shortcode above.</li>';
+      return;
+    }
+    var html = '';
+    state.shortcodeHistory.forEach(function(item) {
+      var d = new Date(item.timestamp);
+      var timeStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var shortUrl = item.url.length > 40 ? item.url.slice(0, 37) + '...' : item.url;
+      html += '<li class="history-item" onclick="copyText(\'' + item.code.replace(/'/g, "\\'") + '\', this)" aria-label="Copy shortcode ' + item.code + '">' +
+        '<span style="color:var(--flame);font-weight:700">' + item.code + '</span>' +
+        '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + shortUrl + '</span>' +
+        '<span class="hi-time">' + timeStr + '</span>' +
+        '</li>';
+    });
+    list.innerHTML = html;
+  }
+
+  window.clearShortcodeHistory = function() {
+    state.shortcodeHistory = [];
+    try { localStorage.removeItem('ftv_shortcode_history'); } catch(e) {}
+    renderShortcodeHistory();
+    showToast('Shortcode history cleared', 'info');
+  };
+
+  // ===== APK LIBRARY =====
+  window.setCat = function(cat, btn) {
+    state.apkCategory = cat;
+    document.querySelectorAll('.cat-btn').forEach(function(b) {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    if (btn) {
+      btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
+    }
+    filterAPKs();
+  };
+
+  window.filterAPKs = function() {
+    var search = (document.getElementById('apk-search') || {}).value || '';
+    search = search.toLowerCase().trim();
+    var cards = document.querySelectorAll('.apk-card');
+    cards.forEach(function(card) {
+      var cat = card.getAttribute('data-cat');
+      var name = (card.getAttribute('data-name') || '').toLowerCase();
+      var desc = (card.querySelector('.apk-desc') || {}).textContent || '';
+      desc = desc.toLowerCase();
+      var catMatch = state.apkCategory === 'all' || cat === state.apkCategory;
+      var searchMatch = !search || name.includes(search) || desc.includes(search) || cat.includes(search);
+      if (catMatch && searchMatch) {
+        card.classList.remove('hidden-filter');
+        card.style.display = '';
+      } else {
+        card.classList.add('hidden-filter');
+        card.style.display = 'none';
+      }
+    });
+  };
+
+  // ===== ACCORDION / ISSUE TOGGLE =====
+  window.toggleAccordion = function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var isOpen = el.classList.contains('open');
+    el.classList.toggle('open');
+    var header = el.querySelector('.accordion-header');
+    if (header) header.setAttribute('aria-expanded', !isOpen);
+  };
+
+  window.toggleIssue = function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var isOpen = el.classList.contains('open');
+    el.classList.toggle('open');
+    var header = el.querySelector('.issue-header');
+    if (header) header.setAttribute('aria-expanded', !isOpen);
+  };
+
+  // ===== NAV SEARCH =====
+  function initNavSearch() {
+    var input = document.getElementById('nav-search');
+    var countEl = document.getElementById('nav-search-count');
+    if (!input) return;
+    input.addEventListener('input', function() {
+      var val = input.value.toLowerCase().trim();
+      var btns = document.querySelectorAll('.nav-btn');
+      var visible = 0;
+      btns.forEach(function(btn) {
+        var text = btn.textContent.toLowerCase();
+        if (!val || text.includes(val)) {
+          btn.classList.remove('hidden-search');
+          visible++;
+        } else {
+          btn.classList.add('hidden-search');
+        }
+      });
+      if (countEl) countEl.textContent = val ? visible + '' : '';
+    });
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        input.value = '';
+        input.dispatchEvent(new Event('input'));
+        input.blur();
+      }
+    });
+  }
+
+  // ===== KEYBOARD SHORTCUTS =====
+  function initKeyboardShortcuts() {
+    document.addEventListener('keydown', function(e) {
+      var tag = document.activeElement ? document.activeElement.tagName : '';
+      var isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+      if (e.key === '/' && !isInput) {
+        e.preventDefault();
+        var search = document.getElementById('nav-search');
+        if (search) search.focus();
+        return;
+      }
+
+      if (!isInput) {
+        var num = parseInt(e.key, 10);
+        if (num >= 1 && num <= 9) {
+          e.preventDefault();
+          switchPanel(num - 1);
+        }
+      }
+
+      if (e.key === 'Escape' && isInput) {
+        document.activeElement.blur();
+      }
+    });
+  }
+
+  // ===== PWA / SERVICE WORKER =====
+  function initPWA() {
+    // Install prompt
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault();
+      state.deferredInstallPrompt = e;
+      var btn = document.getElementById('btn-install');
+      if (btn) btn.classList.add('visible');
+    });
+
+    var installBtn = document.getElementById('btn-install');
+    if (installBtn) {
+      installBtn.addEventListener('click', function() {
+        if (state.deferredInstallPrompt) {
+          state.deferredInstallPrompt.prompt();
+          state.deferredInstallPrompt.userChoice.then(function(result) {
+            if (result.outcome === 'accepted') {
+              showToast('App installed successfully!', 'success', 4000);
+              installBtn.classList.remove('visible');
+            }
+            state.deferredInstallPrompt = null;
+          });
+        }
+      });
+    }
+
+    // Register inline service worker
+    if ('serviceWorker' in navigator) {
+      var swCode = [
+        "const CACHE = 'ftv-sideload-v1';",
+        "const URLS = [location.pathname];",
+        "self.addEventListener('install', e => {",
+        "  e.waitUntil(caches.open(CACHE).then(c => c.addAll(URLS)));",
+        "  self.skipWaiting();",
+        "});",
+        "self.addEventListener('activate', e => {",
+        "  e.waitUntil(clients.claim());",
+        "});",
+        "self.addEventListener('fetch', e => {",
+        "  e.respondWith(",
+        "    caches.match(e.request).then(r => r || fetch(e.request))",
+        "  );",
+        "});"
+      ].join('\n');
+
+      var blob = new Blob([swCode], { type: 'application/javascript' });
+      var swUrl = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(swUrl).catch(function() {
+        // Service worker registration failed — this is OK (e.g. file:// protocol)
+      });
+    }
+  }
+
+  // ===== INIT =====
+  function init() {
+    // Splash
+    setTimeout(function() {
+      var splash = document.getElementById('splash');
+      if (splash) splash.classList.add('hidden');
+    }, 800);
+
+    // Load persisted state
+    try {
+      var savedTheme = localStorage.getItem('ftv_theme') || 'dark';
+      applyTheme(savedTheme);
+    } catch(e) { applyTheme('dark'); }
+
+    loadChecklist();
+    loadDevice();
+    loadSettings();
+    loadShortcodeHistory();
+
+    // Theme button
+    var themeBtn = document.getElementById('btn-theme');
+    if (themeBtn) themeBtn.addEventListener('click', window.toggleTheme);
+
+    // Nav buttons - event delegation
+    var nav = document.querySelector('nav');
+    if (nav) {
+      nav.addEventListener('click', function(e) {
+        var btn = e.target.closest('.nav-btn');
+        if (btn) {
+          var idx = parseInt(btn.getAttribute('data-panel'), 10);
+          switchPanel(idx);
+        }
+      });
+    }
+
+    // Scroll progress
+    window.addEventListener('scroll', updateScrollProgress, { passive: true });
+    updateScrollProgress();
+
+    // Status bar
+    updateStatus();
+    updateClock();
+    setInterval(updateClock, 1000);
+    window.addEventListener('online', function() { updateStatus(); showToast('Back online!', 'success'); });
+    window.addEventListener('offline', function() { updateStatus(); showToast('You are offline', 'warning'); });
+
+    // Card entrance animations
+    observeCards();
+
+    // Stat counters — start when panel 0 is visible
+    var statsObserver = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) { startCounters(); statsObserver.disconnect(); }
+      });
+    }, { threshold: 0.2 });
+    var statsGrid = document.querySelector('.stats-grid');
+    if (statsGrid) statsObserver.observe(statsGrid);
+
+    // Nav search
+    initNavSearch();
+
+    // Keyboard shortcuts
+    initKeyboardShortcuts();
+
+    // PWA
+    initPWA();
+
+    // kbd/path-badge copy on click (event delegation)
+    document.addEventListener('click', function(e) {
+      var kbd = e.target.closest('kbd');
+      if (kbd && !e.target.closest('.copy-btn-inline')) {
+        copyText(kbd.textContent.trim(), kbd);
+      }
+    });
+  }
+
+  // Run on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
+</script>
+</body>
+</html>
