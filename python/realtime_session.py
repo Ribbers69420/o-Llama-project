@@ -27,25 +27,35 @@ from typing import Any, Protocol
 logger = logging.getLogger(__name__)
 
 
-class RealtimeClient(Protocol):
-    """Subset of the OpenAI Realtime client used by this module.
+class SessionResponse(Protocol):
+    session_id: str
 
-    Provided as a Protocol so tests can pass a fake without the SDK installed.
-    The real implementation is ``openai.OpenAI(api_key=...).beta.realtime``.
+
+class RealtimeSessionsAPI(Protocol):
+    """The ``.sessions`` namespace on the realtime client.
+
+    Matches ``openai.OpenAI(api_key=...).beta.realtime.sessions``.
     """
 
-    async def create_session(
+    async def create(
         self,
         *,
         model: str,
         session_duration: int,
         metadata: dict[str, Any],
         configuration: dict[str, Any],
-    ) -> "SessionResponse": ...
+    ) -> SessionResponse: ...
 
 
-class SessionResponse(Protocol):
-    session_id: str
+class RealtimeClient(Protocol):
+    """Subset of the OpenAI Realtime client used by this module.
+
+    Provided as a Protocol so tests can pass a fake without the SDK installed.
+    Pass ``openai.OpenAI(api_key=...).beta.realtime`` directly — it exposes
+    ``.sessions.create(...)`` matching ``RealtimeSessionsAPI`` above.
+    """
+
+    sessions: RealtimeSessionsAPI
 
 
 @dataclass
@@ -71,7 +81,7 @@ class RealtimeSession:
 
     async def initialize(self) -> str:
         try:
-            self.response = await self.client.create_session(
+            self.response = await self.client.sessions.create(
                 model=self.model,
                 session_duration=self.session_duration,
                 metadata=self._metadata(),
@@ -109,20 +119,51 @@ class SessionManager:
     session_metrics: dict[str, SessionMetrics] = field(default_factory=dict)
 
     async def create_session(self, user_id: str) -> str:
-        session = RealtimeSession(client=self.client, model=self.model)
-        session_id = await session.initialize()
+        session, session_id, metrics = await self._build_session()
         self.active_sessions[user_id] = session
-        now = datetime.now(timezone.utc)
-        self.session_metrics[session_id] = SessionMetrics(created_at=now, last_activity=now)
+        self.session_metrics[session_id] = metrics
         return session_id
 
     async def renew_session(self, user_id: str) -> str:
+        """Renew a user's session atomically.
+
+        The new session is staged off to the side and migration runs against
+        it before any active binding is replaced. If migration fails, the
+        existing session remains in place and the caller sees the original
+        exception — there is no half-renewed state.
+        """
         if user_id not in self.active_sessions:
             raise ValueError(f"No active session for user {user_id!r}")
         old_session = self.active_sessions[user_id]
-        new_session_id = await self.create_session(user_id)
-        await self._migrate_session_data(old_session, new_session_id)
+
+        new_session, new_session_id, new_metrics = await self._build_session()
+        try:
+            await self._migrate_session_data(old_session, new_session_id)
+        except Exception:
+            # Migration failed — drop the staged session and let the caller
+            # decide whether to retry. The active binding is untouched.
+            await self._discard_session(new_session)
+            raise
+
+        self.active_sessions[user_id] = new_session
+        self.session_metrics[new_session_id] = new_metrics
         return new_session_id
+
+    async def _build_session(self) -> tuple[RealtimeSession, str, SessionMetrics]:
+        """Initialize a session without binding it to a user."""
+        session = RealtimeSession(client=self.client, model=self.model)
+        session_id = await session.initialize()
+        now = datetime.now(timezone.utc)
+        return session, session_id, SessionMetrics(created_at=now, last_activity=now)
+
+    async def _discard_session(self, session: RealtimeSession) -> None:
+        """Release a staged session that won't be bound.
+
+        Hook for SDK-specific cleanup (e.g. closing a websocket, calling
+        ``sessions.delete(...)``). The default is a no-op since the base
+        Protocol doesn't promise a delete method.
+        """
+        del session
 
     async def _migrate_session_data(
         self,

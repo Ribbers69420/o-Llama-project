@@ -10,9 +10,10 @@ Analysis of the raw dataset blob the user supplied, plus the fixes applied as pa
 | Python — undefined `API_KEY` | error | resolved — see [`python/realtime_session.py`](python/realtime_session.py) |
 | Python — `api_key` stored but never used | bug | resolved (client injected) |
 | Python — `datetime.utcnow()` deprecated | warning | resolved (`datetime.now(timezone.utc)`) |
-| Python — legacy `openai.RealtimeSession.create` global | warning | resolved (Protocol-based client) |
+| Python — legacy `openai.RealtimeSession.create` global | warning | resolved (Protocol-based client matching real SDK shape `client.sessions.create(...)`) |
 | Python — `_migrate_session_data` signature mismatch across copies | bug | resolved (consistent signature) |
 | Python — `renew_session` returns inconsistent type across copies | bug | resolved (always returns `str`) |
+| Python — `renew_session` was non-atomic; migration failure left user bound to context-less new session | bug | resolved post-review — new session is staged, swapped only on successful migration, with `_discard_session` cleanup hook on failure |
 | TSX — depends on uninstalled `@/components/ui/*` (shadcn) | error in repo context | resolved (Tailwind-only rewrite) |
 | TSX — array index as React key on mutable list | bug | resolved (per-item stable id via `crypto.randomUUID`) |
 | TSX — no client-side validation before submit | bug | resolved |
