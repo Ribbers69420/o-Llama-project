@@ -1,73 +1,82 @@
-# React + TypeScript + Vite
+# Quantum-Viz — Enterprise Quantum-Interface Visualizer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive React + TypeScript visualizer for the **Unified Quantum-Cognitive
+Framework (UQCF)**. The app renders the framework's layered architecture as an
+explorable tree: each node is a system component carrying performance metrics
+(computational efficiency, scalability, resilience), a security profile
+(integrity, compliance, risk mitigation), and "quantum potential" indicators
+(superposition capacity, entanglement coefficients, coherence). Components expand
+to reveal detailed metric bars and use quantum notation such as $|\Psi_0\rangle$,
+superposition, entanglement, and coherence throughout.
 
-Currently, two official plugins are available:
+The visualizer is a concrete, interactive instantiation of the theory described
+in [`UQCF.tex`](./UQCF.tex): the Φ-layer cascade, the prompt–context–response
+subsystem structure, coherence-aware traversal, and governance-driven metrics all
+have direct counterparts in the on-screen component hierarchy and its scoring.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Theoretical Foundation
 
-## React Compiler
+The whitepaper at [`UQCF.tex`](./UQCF.tex) is the design document for this
+project. It develops a single synthesis in two registers:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **A formal theory** of cognition-inspired state evolution in a Hilbert space —
+  unitary Φ-layer transformations, controlled collapse, density-operator
+  subsystems, interference as context-sensitive selection, and a suite of
+  evaluation metrics (entanglement entropy, purity/coherence, response entropy,
+  fidelity, mutual information, and an ethical risk index).
+- **A systems architecture** — the quantum-fractal knowledge architecture:
+  graph-structured memory, golden-ratio (φ) layer stratification,
+  semantic-preserving compression, entanglement-inspired relationship scoring,
+  adaptive resource allocation, and governance enforced at the substrate level.
 
-## Expanding the ESLint configuration
+The component layers shown in the visualizer (Core, Cognitive, Security,
+Integration, Optimization) map onto the framework's functional families described
+in §3 and §6 of the paper. Treat `UQCF.tex` as the source of truth for *why* the
+interface is organised the way it is.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Building the paper (optional)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+`UQCF.tex` uses `fontspec` + `babel` with the Noto Serif font, so it must be
+compiled with a Unicode engine (LuaLaTeX or XeLaTeX) rather than pdfLaTeX:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+lualatex UQCF.tex      # or: xelatex UQCF.tex
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+This is not part of the app build — it is only needed if you want a typeset PDF
+of the whitepaper.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Running the app
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Requires Node.js. Install dependencies and start the dev server:
+
+```bash
+npm install
+npm run dev        # start Vite dev server with HMR
 ```
+
+Other useful scripts:
+
+```bash
+npm run build      # type-check and produce a production build in dist/
+npm run preview    # serve the production build locally
+npm run lint       # run ESLint
+```
+
+## Project structure
+
+```
+.
+├── UQCF.tex                                  # Unified Quantum-Cognitive Framework whitepaper (design doc)
+├── index.html                                # Vite entry HTML
+├── src/
+│   ├── App.tsx                               # Renders the visualizer
+│   ├── components/
+│   │   └── EnterpriseQuantumVisualizer.tsx   # Core interactive tree visualization
+│   └── monicaAIInstructions.ts               # AI assistant system instructions
+└── ...                                       # Vite / TypeScript / ESLint config
+```
+
+## Stack
+
+React 19, TypeScript, Vite, TailwindCSS, and lucide-react for icons.
