@@ -1,0 +1,9 @@
+id	image_path	language	century	domain	source_corpus	ground_truth
+bentham_0001	images/bentham_0001.jpg	english	18	letter	bentham	It is to be observed that the principle of utility
+bentham_0002	images/bentham_0002.jpg	english	18	letter	bentham	Nature has placed mankind under the governance
+bentham_0003	images/bentham_0003.jpg	english	19	notes	bentham	of two sovereign masters, pain and pleasure.
+icdar_fr_0041	images/icdar_fr_0041.jpg	french	17	ledger	icdar2016	Le marchand a paye la somme convenue ce jour
+icdar_fr_0042	images/icdar_fr_0042.jpg	french	17	ledger	icdar2016	pour les marchandises livrees au port de Rouen
+icdar_de_0071	images/icdar_de_0071.jpg	german	16	ledger	icdar2015	Im Namen des Herrn wurde dieser Brief geschrieben
+icdar_de_0072	images/icdar_de_0072.jpg	german	17	letter	icdar2015	und an den Rat der freien Stadt uebersandt
+icdar_de_0073	images/icdar_de_0073.jpg	german	17	letter	icdar2015	mit der Bitte um eine baldige Antwort darauf

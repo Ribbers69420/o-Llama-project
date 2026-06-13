@@ -1,0 +1,24 @@
+{
+  "name": "baseline_trocr",
+  "dataset_tsv": "../data/sample.tsv",
+  "out_dir": "../runs/baseline_trocr",
+  "adapter": {
+    "type": "trocr",
+    "params": {
+      "model_name": "microsoft/trocr-base-handwritten",
+      "device": "cpu",
+      "max_new_tokens": 256
+    }
+  },
+  "normalization": {
+    "keep_case": true,
+    "normalize_ws": true,
+    "unicode_form": "NFC"
+  },
+  "bootstrap": {
+    "iterations": 1000,
+    "confidence": 0.95,
+    "seed": 42
+  },
+  "max_samples": 0
+}
