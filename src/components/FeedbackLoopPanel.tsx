@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Ban, Check, CheckCircle2, CircleSlash, CornerLeftUp, Hourglass, Repeat, Undo2 } from 'lucide-react';
-import { RESPONSE_LABELS, THRESHOLDS } from '../uqcf/pipeline';
+import { RESPONSE_LABELS, THRESHOLDS, formatVs } from '../uqcf/pipeline';
 import {
   MAX_BUDGET,
   MAX_DRIFT,
@@ -11,7 +11,7 @@ import {
 } from '../uqcf/feedbackLoop';
 import { MetricMultiple } from './PipelineCharts';
 import { Panel, Slider, StatusBanner } from './pipelineUi';
-import { VIZ } from './vizTokens';
+import { GLYPH_MONO_FONT, VIZ } from './vizTokens';
 
 // --- OUTCOME ---
 
@@ -51,7 +51,7 @@ const OutcomeBanner: React.FC<{ loop: LoopResult }> = ({ loop }) => {
       color={VIZ.warning}
       icon={<CircleSlash size={20} />}
       title="Abstained: failure is not recoverable (§4.6)"
-      body={`${o.reason}. Fixing a lower-priority criterion cannot repair it, so the loop stops instead of guessing.`}
+      body={`${o.reason}. The loop only remedies the most fundamental failure, and none of its remedies is left, so it stops instead of guessing.`}
     />
   );
 };
@@ -92,7 +92,9 @@ const RunCard: React.FC<{ run: LoopIteration; bestBefore: number | null; isLast:
       </div>
       {run.adjustment && (
         <p className="text-[11px] text-slate-400 mt-1">
-          Because {run.adjustment.trigger}: <span className="font-mono text-slate-300">{run.adjustment.change}</span>{' '}
+          Because {run.adjustment.trigger}: <span className="text-slate-300" style={{ fontFamily: GLYPH_MONO_FONT }}>
+            {run.adjustment.change}
+          </span>{' '}
           <span className="text-slate-500">({run.adjustment.section})</span>
         </p>
       )}
@@ -119,7 +121,7 @@ const RunCard: React.FC<{ run: LoopIteration; bestBefore: number | null; isLast:
         <p className="text-[11px] text-slate-500 mt-1">
           Stability check: {run.stability.stable ? 'same answer' : 'answer changed or drifted'} with couplings ×
           {run.stability.probes.map((p) => p.scale.toFixed(2)).join(' and ×')} (largest drift{' '}
-          {fmt(Math.max(...run.stability.probes.map((p) => p.drift)))}, limit {MAX_DRIFT}).
+          {formatVs(Math.max(...run.stability.probes.map((p) => p.drift)), MAX_DRIFT)}, limit {MAX_DRIFT}).
         </p>
       )}
     </li>

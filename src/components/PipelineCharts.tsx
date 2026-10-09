@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { chartFocus } from './chartFocus';
 import { GLYPH_FONT, VIZ } from './vizTokens';
 
 // --- HELPERS ---
@@ -44,6 +45,8 @@ export const ResponseBars: React.FC<{
         const x = m.left + band * k + (band - barW) / 2;
         const cx = x + barW / 2;
         const active = hovered === k;
+        // The tooltip stays inside the chart, also for the outermost bars.
+        const tipX = Math.max(0, Math.min(W - 104, cx - 52));
         return (
           <g
             key={labels[k]}
@@ -79,8 +82,8 @@ export const ResponseBars: React.FC<{
             )}
             {active && (
               <g pointerEvents="none">
-                <rect x={cx - 52} y={m.top - 20} width={104} height={20} rx={4} fill="#020617" stroke={VIZ.axis} />
-                <text x={cx} y={m.top - 6} textAnchor="middle" fontSize={11} fill={VIZ.textPrimary}>
+                <rect x={tipX} y={m.top - 20} width={104} height={20} rx={4} fill="#020617" stroke={VIZ.axis} />
+                <text x={tipX + 52} y={m.top - 6} textAnchor="middle" fontSize={11} fill={VIZ.textPrimary}>
                   <tspan fontWeight={600} className="tabular-nums">{p.toFixed(3)}</tspan>
                   <tspan fill={VIZ.textSecondary}>{`  P(${labels[k]})`}</tspan>
                 </text>
@@ -139,9 +142,10 @@ export const MetricMultiple: React.FC<MultipleProps> = ({
   const step = values.length > 1 ? plotW / (values.length - 1) : plotW;
   const x = (i: number) => (values.length > 1 ? m.left + step * i : m.left + plotW / 2);
   const y = (v: number) => m.top + plotH * (1 - (v - lo) / (hi - lo || 1));
-  const focus = hovered ?? selected;
+  const { hover, focus } = chartFocus(hovered, selected, values.length);
   const fmt = (v: number) => v.toFixed(digits);
   const last = values.length - 1;
+  const sel = Math.min(selected, last);
   const path = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(v)}`).join(' ');
 
   return (
@@ -165,7 +169,7 @@ export const MetricMultiple: React.FC<MultipleProps> = ({
         viewBox={`0 0 ${W} ${H}`}
         className="w-full"
         role="img"
-        aria-label={`${label} across pipeline steps`}
+        aria-label={`${label} across ${focusPrefix ? `${focusPrefix}s` : 'pipeline steps'}`}
         onPointerLeave={() => onHover(null)}
       >
         {[lo, hi].map((t) => (
@@ -188,9 +192,9 @@ export const MetricMultiple: React.FC<MultipleProps> = ({
           </g>
         )}
         {/* Selected step marker. */}
-        <line x1={x(selected)} x2={x(selected)} y1={m.top} y2={m.top + plotH} stroke={VIZ.reference} strokeWidth={1} />
-        {hovered !== null && hovered !== selected && (
-          <line x1={x(hovered)} x2={x(hovered)} y1={m.top} y2={m.top + plotH} stroke={VIZ.crosshair} strokeWidth={1} />
+        <line x1={x(sel)} x2={x(sel)} y1={m.top} y2={m.top + plotH} stroke={VIZ.reference} strokeWidth={1} />
+        {hover !== null && hover !== sel && (
+          <line x1={x(hover)} x2={x(hover)} y1={m.top} y2={m.top + plotH} stroke={VIZ.crosshair} strokeWidth={1} />
         )}
         <path d={path} fill="none" stroke={VIZ.series} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         <circle cx={x(focus)} cy={y(values[focus])} r={4} fill={VIZ.series} stroke={VIZ.surface} strokeWidth={2} />

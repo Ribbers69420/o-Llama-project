@@ -12,7 +12,7 @@ function App() {
 
   return (
     <div className="relative min-h-screen bg-slate-950">
-      {/* A full-width sticky bar, so the four views fit without covering any page header.
+      {/* A full-width sticky bar, so the menu never covers a page header.
           The safe-area inset keeps it below a phone's status bar when the page runs edge to edge. */}
       <nav className="sticky top-[env(safe-area-inset-top,0px)] z-50 flex flex-wrap justify-center gap-1 px-4 py-1 bg-slate-900/90 backdrop-blur border-b border-slate-700">
         <button
