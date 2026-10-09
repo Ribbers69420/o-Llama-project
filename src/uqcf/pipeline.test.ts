@@ -4,11 +4,14 @@ import {
   DEFAULT_PARAMS,
   DIM,
   LAYERS,
+  MAX_DEPTH,
+  SYNTHESIS_START,
   UNSAFE_RESPONSE,
   computeMetrics,
   dephase,
   govern,
   initialState,
+  layerSchedule,
   partialTrace,
   runPipeline,
   traceOf,
@@ -115,6 +118,24 @@ describe('runPipeline', () => {
     }
   });
 
+  it('repeats only the synthesis layers ⦾ 🜿 🝏 🝪 for each extra pass', () => {
+    const synthesis = LAYERS.length - SYNTHESIS_START;
+    for (const depth of [1, 2, 3]) {
+      const r = runPipeline({ ...DEFAULT_PARAMS, depth });
+      expect(r.steps).toHaveLength(LAYERS.length + 2 + (depth - 1) * synthesis);
+      const passes = r.steps.filter((s) => s.layer === SYNTHESIS_START).map((s) => s.pass);
+      expect(passes).toEqual(Array.from({ length: depth }, (_, i) => i + 1));
+    }
+    // Out-of-range depths are clamped.
+    expect(layerSchedule(0)).toHaveLength(LAYERS.length);
+    expect(layerSchedule(9)).toHaveLength(LAYERS.length + (MAX_DEPTH - 1) * synthesis);
+  });
+
+  it('stays the identity at any depth when every layer is off', () => {
+    const r = runPipeline({ ...DEFAULT_PARAMS, thetas: LAYERS.map(() => 0), dephasing: 0, depth: MAX_DEPTH });
+    expect(maxAbsDiff(r.steps[r.steps.length - 2].rho, initialState())).toBeLessThan(1e-12);
+  });
+
   it('loses purity and fidelity under dephasing', () => {
     const final = runPipeline(DEFAULT_PARAMS).steps.at(-1)!.metrics;
     expect(final.purity).toBeLessThan(1);
@@ -126,11 +147,16 @@ describe('runPipeline', () => {
     expect(maxAbsDiff(r.steps[LAYERS.length].rho, initialState())).toBeLessThan(1e-12);
   });
 
-  it('defaults exercise governance and end in a collapse', () => {
+  it('defaults exercise governance and leave the answer diffuse after one pass', () => {
     const r = runPipeline(DEFAULT_PARAMS);
     expect(r.governance.pUnsafeBefore).toBeGreaterThan(DEFAULT_PARAMS.epsilon);
     expect(r.signals.find((s) => s.id === 'unsafe')?.triggered).toBe(true);
-    expect(r.decision.kind).toBe('collapse');
+    expect(r.decision).toMatchObject({ kind: 'continue', reasons: [expect.stringMatching(/^confidence/)] });
+  });
+
+  it('collapses in one pass from the one-pass couplings', () => {
+    const r = runPipeline({ ...DEFAULT_PARAMS, thetas: [1.1, 2.2, 0.9, 2.1, 2.5, 0.6, 0.5, 1.9] });
+    expect(r.decision).toEqual({ kind: 'collapse', response: 0 });
   });
 
   it('states the true comparison in every control signal', () => {

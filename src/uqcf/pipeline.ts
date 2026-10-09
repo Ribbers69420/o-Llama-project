@@ -100,7 +100,7 @@ export const LAYERS: LayerSpec[] = [
     codexFunction: 'Primary perception',
     codexLayer: 'φ⁰',
     operator: 'R_y(θ) on the prompt qubit P',
-    defaultTheta: 1.1,
+    defaultTheta: 2.8,
     build: (t) => on({ P: ry(t) }),
   },
   {
@@ -110,7 +110,7 @@ export const LAYERS: LayerSpec[] = [
     codexFunction: 'Kalman resonance and update flow',
     codexLayer: 'φ¹',
     operator: 'Exchange coupling exp(−iθ(XX+YY)/2) between P and C: the context is updated from the prompt',
-    defaultTheta: 2.2,
+    defaultTheta: 1.4,
     build: (t) =>
       matmul(expInvolution(t / 2, on({ P: X, C: X })), expInvolution(t / 2, on({ P: Y, C: Y }))),
   },
@@ -121,7 +121,7 @@ export const LAYERS: LayerSpec[] = [
     codexFunction: null,
     codexLayer: null,
     operator: 'C-controlled R_y(θ) on response bit r₁: binds context to the response',
-    defaultTheta: 0.9,
+    defaultTheta: 0.8,
     build: (t) => controlled('C', 'R1', ry(t)),
   },
   {
@@ -131,7 +131,7 @@ export const LAYERS: LayerSpec[] = [
     codexFunction: null,
     codexLayer: null,
     operator: 'P-controlled R_y(θ) on response bit r₀: binds prompt to the response',
-    defaultTheta: 2.1,
+    defaultTheta: 1.5,
     build: (t) => controlled('P', 'R0', ry(t)),
   },
   {
@@ -141,7 +141,7 @@ export const LAYERS: LayerSpec[] = [
     codexFunction: 'Fractal batching / harmonic compression',
     codexLayer: 'φ²–φ⁵',
     operator: 'R_x(θ) on both response bits: mixes candidate amplitudes so their phases interfere',
-    defaultTheta: 2.5,
+    defaultTheta: 2.6,
     build: (t) => matmul(on({ R1: expInvolution(t / 2, X) }), on({ R0: expInvolution(t / 2, X) })),
   },
   {
@@ -151,7 +151,7 @@ export const LAYERS: LayerSpec[] = [
     codexFunction: 'Fractal error correction',
     codexLayer: 'φ⁸–φ¹⁰',
     operator: 'ZZ phase couplings C–r₁ and P–r₀: relative phases between branches',
-    defaultTheta: 0.6,
+    defaultTheta: 1.5,
     build: (t) =>
       matmul(expInvolution(t / 2, on({ C: Z, R1: Z })), expInvolution(t / 2, on({ P: Z, R0: Z }))),
   },
@@ -162,7 +162,7 @@ export const LAYERS: LayerSpec[] = [
     codexFunction: 'Time-ordered entanglement flow',
     codexLayer: 'φ³–φ⁶',
     operator: `Trotterised evolution exp(−iĤt), Ĥ = Z_P Z_r₀ + Z_C Z_r₁ + ½(X_r₀ + X_r₁), t = θ, ${TROTTER_STEPS} steps`,
-    defaultTheta: 0.5,
+    defaultTheta: 2.8,
     build: (t) => {
       const dt = t / TROTTER_STEPS;
       const step = [
@@ -184,7 +184,7 @@ export const LAYERS: LayerSpec[] = [
     codexLayer: 'φ⁷ and above',
     operator:
       'Partial reflection I + (e^{−iθ} − 1)|s⟩⟨s| about the uniform response state |s⟩ (θ = π is a Grover diffusion): concentrates probability mass',
-    defaultTheta: 1.9,
+    defaultTheta: 0.4,
     build: (t) => {
       const proj = kron(identity(4), outer(UNIFORM_R));
       return add(identity(DIM), scale(proj, { re: Math.cos(t) - 1, im: -Math.sin(t) }));
@@ -192,9 +192,9 @@ export const LAYERS: LayerSpec[] = [
   },
 ];
 
-// Defaults were found by a seeded random search for a run that exercises every
-// stage: entropy falls along the chain, unsafe mass exceeds ε so the projector
-// acts, and the final state collapses. They carry no meaning beyond that.
+// Defaults were found by a seeded random search for a run where one pass is not
+// enough: the projector acts, the answer stays diffuse, and the feedback loop
+// converges after one extra synthesis pass. They carry no meaning beyond that.
 export const DEFAULT_THETAS = LAYERS.map((l) => l.defaultTheta);
 
 // --- STATE PREPARATION (QuantumMetaPrompt, §4.2) ---
@@ -384,10 +384,49 @@ export type Decision =
   | { kind: 'continue'; reasons: string[] }
   | { kind: 'refuse'; reason: string };
 
+/** A failed termination criterion (§4.7), listed in the order the loop remedies them. */
+export interface CriterionFailure {
+  id: 'coherence' | 'binding' | 'diffuse' | 'unsafe';
+  reason: string;
+}
+
+/**
+ * Single-pass termination criteria (§4.7). "Response confidence" covers both
+ * readouts of the §5 response-entropy bullet: H_R and confidence max_k p_k.
+ * Stability across iterations is checked by the feedback loop.
+ */
+export const failedCriteria = (m: StepMetrics, epsilon: number): CriterionFailure[] => {
+  const fmt = (x: number) => x.toFixed(2);
+  const failures: CriterionFailure[] = [];
+  if (m.purity < THRESHOLDS.minPurity) {
+    failures.push({ id: 'coherence', reason: `γ ${m.purity.toFixed(3)} < ${THRESHOLDS.minPurity}` });
+  }
+  if (m.mutualInfo < THRESHOLDS.minMutualInfo) {
+    failures.push({ id: 'binding', reason: `I(C;R) ${fmt(m.mutualInfo)} bits < ${THRESHOLDS.minMutualInfo}` });
+  }
+  const diffuse: string[] = [];
+  if (m.confidence < THRESHOLDS.minConfidence) diffuse.push(`confidence ${fmt(m.confidence)} < ${THRESHOLDS.minConfidence}`);
+  if (m.responseEntropy > THRESHOLDS.maxResponseEntropy) {
+    diffuse.push(`H_R ${fmt(m.responseEntropy)} bits > ${THRESHOLDS.maxResponseEntropy}`);
+  }
+  if (diffuse.length) failures.push({ id: 'diffuse', reason: diffuse.join(', ') });
+  if (m.pUnsafe > epsilon) failures.push({ id: 'unsafe', reason: `p_unsafe ${m.pUnsafe.toFixed(3)} > ε` });
+  return failures;
+};
+
 // --- PIPELINE ---
+
+/** Index of ⦾, the first synthesis layer; ⦾ 🜿 🝏 🝪 repeat once per pass. */
+export const SYNTHESIS_START = 4;
+export const MAX_DEPTH = 3;
 
 export interface PipelineParams {
   thetas: number[];
+  /**
+   * Passes through the synthesis layers ⦾ 🜿 🝏 🝪. §3.4: some prompts "require
+   * multiple recursive passes through more integrative synthesis layers".
+   */
+  depth: number;
   /** Dephasing strength p applied after every layer (§2.6). */
   dephasing: number;
   /** Tolerance ε on p_unsafe. */
@@ -397,15 +436,31 @@ export interface PipelineParams {
 
 export const DEFAULT_PARAMS: PipelineParams = {
   thetas: DEFAULT_THETAS,
+  depth: 1,
   dephasing: 0.01,
   epsilon: 0.05,
   mitigation: 'project',
+};
+
+/** Layer indices in execution order: framing and binding once, synthesis `depth` times. */
+export const layerSchedule = (depth: number): { layer: number; pass: number }[] => {
+  const schedule: { layer: number; pass: number }[] = [];
+  for (let k = 0; k < SYNTHESIS_START; k++) schedule.push({ layer: k, pass: 1 });
+  const passes = Math.min(MAX_DEPTH, Math.max(1, Math.round(depth)));
+  for (let pass = 1; pass <= passes; pass++) {
+    for (let k = SYNTHESIS_START; k < LAYERS.length; k++) schedule.push({ layer: k, pass });
+  }
+  return schedule;
 };
 
 export interface PipelineStep {
   kind: 'init' | 'layer' | 'governance';
   label: string;
   glyph: string | null;
+  /** Index into LAYERS for layer steps, otherwise null. */
+  layer: number | null;
+  /** Synthesis pass this step belongs to (1 outside the synthesis block). */
+  pass: number;
   rho: CMatrix;
   metrics: StepMetrics;
 }
@@ -425,21 +480,24 @@ export const runPipeline = (params: PipelineParams): PipelineResult => {
   let rho = initialState();
   let ideal = rho;
   const steps: PipelineStep[] = [
-    { kind: 'init', label: '|Ψ(0)⟩', glyph: null, rho, metrics: computeMetrics(rho, ideal, null) },
+    { kind: 'init', label: '|Ψ(0)⟩', glyph: null, layer: null, pass: 1, rho, metrics: computeMetrics(rho, ideal, null) },
   ];
 
-  unitaries.forEach((u, k) => {
-    rho = dephase(conjugate(u, rho), params.dephasing);
-    ideal = conjugate(u, ideal);
+  for (const { layer: k, pass } of layerSchedule(params.depth)) {
+    rho = dephase(conjugate(unitaries[k], rho), params.dephasing);
+    ideal = conjugate(unitaries[k], ideal);
     const previous = steps[steps.length - 1].metrics.responseProbs;
+    const name = `${LAYERS[k].glyph} ${LAYERS[k].codexName ?? LAYERS[k].codepoint}`;
     steps.push({
       kind: 'layer',
-      label: `${LAYERS[k].glyph} ${LAYERS[k].codexName ?? LAYERS[k].codepoint}`,
+      label: pass > 1 ? `${name} · pass ${pass}` : name,
       glyph: LAYERS[k].glyph,
+      layer: k,
+      pass,
       rho,
       metrics: computeMetrics(rho, ideal, previous),
     });
-  });
+  }
 
   const chainMetrics = steps[steps.length - 1].metrics;
   const governance = govern(rho, params.epsilon, params.mitigation);
@@ -448,6 +506,8 @@ export const runPipeline = (params: PipelineParams): PipelineResult => {
     kind: 'governance',
     label: 'Ethical projector',
     glyph: null,
+    layer: null,
+    pass: 1,
     rho: governance.rho,
     metrics: computeMetrics(governance.rho, idealGoverned, chainMetrics.responseProbs),
   });
@@ -498,13 +558,7 @@ export const runPipeline = (params: PipelineParams): PipelineResult => {
           : 'No allowed mass remains after projection',
     };
   } else {
-    const reasons: string[] = [];
-    if (final.confidence < THRESHOLDS.minConfidence)
-      reasons.push(`confidence ${fmt(final.confidence)} < ${THRESHOLDS.minConfidence}`);
-    if (final.mutualInfo < THRESHOLDS.minMutualInfo)
-      reasons.push(`I(C;R) ${fmt(final.mutualInfo)} < ${THRESHOLDS.minMutualInfo}`);
-    if (final.purity < THRESHOLDS.minPurity) reasons.push(`γ ${fmt(final.purity)} < ${THRESHOLDS.minPurity}`);
-    if (final.pUnsafe > params.epsilon) reasons.push(`p_unsafe ${final.pUnsafe.toFixed(3)} > ε`);
+    const reasons = failedCriteria(final, params.epsilon).map((f) => f.reason);
     decision = reasons.length === 0 ? { kind: 'collapse', response: final.argmax } : { kind: 'continue', reasons };
   }
 

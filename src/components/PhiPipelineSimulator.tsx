@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Ban,
@@ -15,7 +15,9 @@ import {
 import {
   DEFAULT_PARAMS,
   LAYERS,
+  MAX_DEPTH,
   RESPONSE_LABELS,
+  SYNTHESIS_START,
   THRESHOLDS,
   UNSAFE_RESPONSE,
   runPipeline,
@@ -23,10 +25,15 @@ import {
   type Mitigation,
   type PipelineParams,
   type PipelineResult,
+  type PipelineStep,
   type StepMetrics,
 } from '../uqcf/pipeline';
+import { DEFAULT_BUDGET, runFeedbackLoop } from '../uqcf/feedbackLoop';
+import { SCENARIOS, matchScenario, sameParams } from '../uqcf/scenarios';
+import FeedbackLoopPanel from './FeedbackLoopPanel';
 import { MetricMultiple, ResponseBars } from './PipelineCharts';
-import { GLYPH_FONT, VIZ } from './vizTokens';
+import { Glyph, Panel, Slider, StatusBanner } from './pipelineUi';
+import { VIZ } from './vizTokens';
 
 // --- METRIC DEFINITIONS ---
 
@@ -93,64 +100,19 @@ const METRICS: MetricDef[] = [
 
 // --- SMALL PIECES ---
 
-const Glyph: React.FC<{ children: string; className?: string }> = ({ children, className = '' }) => (
-  <span className={className} style={{ fontFamily: GLYPH_FONT }}>
-    {children}
-  </span>
-);
-
-const stepGlyph = (result: PipelineResult, i: number): string => {
-  const step = result.steps[i];
+const stepGlyph = (step: PipelineStep): string => {
   if (step.kind === 'init') return 'Ψ₀';
   if (step.kind === 'governance') return 'Ê';
   return step.glyph ?? '?';
 };
 
-const Panel: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; aside?: React.ReactNode }> = ({
-  title,
-  icon,
-  children,
-  aside,
-}) => (
-  <section className="bg-slate-900/50 rounded-xl border border-slate-800 p-5 shadow-2xl">
-    <div className="flex items-center justify-between gap-3 mb-4">
-      <h2 className="text-sm font-bold flex items-center gap-2 text-slate-200">
-        <span className="text-slate-400">{icon}</span>
-        {title}
-      </h2>
-      {aside}
-    </div>
-    {children}
-  </section>
-);
-
-const Slider: React.FC<{
-  label: React.ReactNode;
-  ariaLabel: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  digits: number;
-  onChange: (v: number) => void;
-}> = ({ label, ariaLabel, value, min, max, step, digits, onChange }) => (
-  <label className="block">
-    <div className="flex items-center justify-between gap-2 mb-1">
-      <span className="text-xs text-slate-300 min-w-0 truncate">{label}</span>
-      <span className="text-xs font-mono text-slate-400 tabular-nums">{value.toFixed(digits)}</span>
-    </div>
-    <input
-      type="range"
-      aria-label={ariaLabel}
-      min={min}
-      max={max}
-      step={step}
-      value={value}
-      onChange={(e) => onChange(Number(e.target.value))}
-      className="w-full accent-indigo-500"
-    />
-  </label>
-);
+/** Layer name for labels, with the synthesis pass when it is not the first. */
+const stepName = (step: PipelineStep): string => {
+  if (step.layer === null) return step.label;
+  const layer = LAYERS[step.layer];
+  const name = layer.codexName ?? layer.codepoint;
+  return step.pass > 1 ? `${name} · pass ${step.pass}` : name;
+};
 
 const StatTile: React.FC<{ label: string; value: string; unit?: string }> = ({ label, value, unit }) => (
   <div className="bg-slate-900 border border-slate-800 rounded-lg p-3">
@@ -164,12 +126,11 @@ const StatTile: React.FC<{ label: string; value: string; unit?: string }> = ({ l
 
 // --- STEP DETAIL ---
 
-const StepDescription: React.FC<{ result: PipelineResult; index: number; params: PipelineParams }> = ({
+const StepDescription: React.FC<{ result: PipelineResult; step: PipelineStep; params: PipelineParams }> = ({
   result,
-  index,
+  step,
   params,
 }) => {
-  const step = result.steps[index];
   if (step.kind === 'init') {
     return (
       <div className="text-xs text-slate-400 space-y-1">
@@ -181,7 +142,7 @@ const StepDescription: React.FC<{ result: PipelineResult; index: number; params:
       </div>
     );
   }
-  if (step.kind === 'governance') {
+  if (step.kind === 'governance' || step.layer === null) {
     const g = result.governance;
     const outcome = !g.triggered
       ? 'Within tolerance: the state passes unchanged.'
@@ -198,10 +159,10 @@ const StepDescription: React.FC<{ result: PipelineResult; index: number; params:
       </div>
     );
   }
-  const layer = LAYERS[index - 1];
+  const layer = LAYERS[step.layer];
   return (
     <div className="text-xs text-slate-400 space-y-1">
-      <p className="text-slate-200 font-semibold flex items-center gap-2">
+      <p className="text-slate-200 font-semibold flex flex-wrap items-center gap-2">
         <Glyph className="text-xl text-slate-100">{layer.glyph}</Glyph>
         {layer.codexName ? <em>{layer.codexName}</em> : <span>Not named in the Codex Harmonicus</span>}
         <span className="font-mono font-normal text-slate-500">{layer.codepoint}</span>
@@ -214,8 +175,16 @@ const StepDescription: React.FC<{ result: PipelineResult; index: number; params:
       </p>
       <p>
         Prototype operator: <span className="text-slate-300">{layer.operator}</span>{' '}
-        <span className="font-mono text-slate-500">θ = {params.thetas[index - 1].toFixed(2)}</span>
+        <span className="font-mono text-slate-500">θ = {params.thetas[step.layer].toFixed(2)}</span>
       </p>
+      {step.layer >= SYNTHESIS_START && (
+        <p>
+          Synthesis pass{' '}
+          <span className="text-slate-300">
+            {step.pass} of {params.depth}
+          </span>
+        </p>
+      )}
     </div>
   );
 };
@@ -225,56 +194,59 @@ const StepDescription: React.FC<{ result: PipelineResult; index: number; params:
 const DecisionBanner: React.FC<{ result: PipelineResult }> = ({ result }) => {
   const d = result.decision;
   const final = result.steps[result.steps.length - 1].metrics;
-  const view =
-    d.kind === 'collapse'
-      ? {
-          color: VIZ.good,
-          icon: <CheckCircle2 size={20} />,
-          title: `Collapse → ${RESPONSE_LABELS[d.response]}`,
-          body: `P(${RESPONSE_LABELS[d.response]}) = ${final.confidence.toFixed(2)}. All termination criteria are met (§4.7).`,
-        }
-      : d.kind === 'continue'
-        ? {
-            color: VIZ.warning,
-            icon: <RefreshCw size={20} />,
-            title: 'Continue: run another feedback iteration',
-            body: `Criteria not met (§4.5, §4.7): ${d.reasons.join('; ')}.`,
-          }
-        : {
-            color: VIZ.critical,
-            icon: <Ban size={20} />,
-            title: 'Refuse (fail closed)',
-            body: `${d.reason} (§4.4).`,
-          };
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="flex items-start gap-3 p-4 rounded-lg bg-slate-900 border"
-      style={{ borderColor: view.color }}
-    >
-      <span className="shrink-0 mt-0.5" style={{ color: view.color }}>
-        {view.icon}
-      </span>
-      <div>
-        <div className="text-sm font-bold text-slate-100">{view.title}</div>
-        <p className="text-xs text-slate-400 mt-1">{view.body}</p>
-      </div>
-    </div>
-  );
+  if (d.kind === 'collapse') {
+    return (
+      <StatusBanner
+        color={VIZ.good}
+        icon={<CheckCircle2 size={20} />}
+        title={`Collapse → ${RESPONSE_LABELS[d.response]}`}
+        body={`P(${RESPONSE_LABELS[d.response]}) = ${final.confidence.toFixed(2)}. Every single-pass criterion is met (§4.7); the feedback loop below also checks that the answer is stable.`}
+      />
+    );
+  }
+  if (d.kind === 'continue') {
+    return (
+      <StatusBanner
+        color={VIZ.warning}
+        icon={<RefreshCw size={20} />}
+        title="Continue: another iteration is needed"
+        body={`Criteria not met (§4.7): ${d.reasons.join('; ')}. The feedback loop below takes it from here (§4.5).`}
+      />
+    );
+  }
+  return <StatusBanner color={VIZ.critical} icon={<Ban size={20} />} title="Refuse (fail closed)" body={`${d.reason} (§4.4).`} />;
 };
 
 // --- MAIN ---
 
+/** Selecting this step index always means "the last step". */
+const LAST_STEP = Number.MAX_SAFE_INTEGER;
+
 const PhiPipelineSimulator: React.FC = () => {
   const [params, setParams] = useState<PipelineParams>(DEFAULT_PARAMS);
-  const [selected, setSelected] = useState(LAYERS.length + 1);
+  const [selectedRaw, setSelected] = useState(LAST_STEP);
   const [hovered, setHovered] = useState<number | null>(null);
+  const [budget, setBudget] = useState(DEFAULT_BUDGET);
 
   const result = useMemo(() => runPipeline(params), [params]);
-  const glyphs = useMemo(() => result.steps.map((_, i) => stepGlyph(result, i)), [result]);
+  const selected = Math.min(selectedRaw, result.steps.length - 1);
+  const glyphs = useMemo(() => result.steps.map(stepGlyph), [result]);
   const step = result.steps[selected];
   const m = step.metrics;
+
+  // The loop runs several pipelines; deferring it keeps the sliders responsive.
+  const deferredParams = useDeferredValue(params);
+  const deferredBudget = useDeferredValue(budget);
+  const loop = useMemo(() => runFeedbackLoop(deferredParams, deferredBudget), [deferredParams, deferredBudget]);
+  const loopStale = deferredParams !== params || deferredBudget !== budget;
+
+  const scenario = matchScenario(params);
+
+  const loadParams = useCallback((next: PipelineParams) => {
+    setParams(next);
+    setSelected(LAST_STEP);
+    setHovered(null);
+  }, []);
 
   const setTheta = useCallback((k: number, v: number) => {
     setParams((prev) => ({ ...prev, thetas: prev.thetas.map((t, i) => (i === k ? v : t)) }));
@@ -302,9 +274,9 @@ const PhiPipelineSimulator: React.FC = () => {
           <div className="text-xs text-indigo-100/80 space-y-1">
             <p>
               <span className="font-bold text-indigo-300">Prototype.</span> The state space, metrics (§5), the ethical
-              projector (§4.4) and the control logic (§4.7, §5.1) follow the paper. The paper names the eight glyph-chain
-              operators but does not define them, so each operator here is a stand-in chosen for this demo. Each layer is the
-              identity at θ = 0, so you can ablate it.
+              projector (§4.4), the control logic (§4.7, §5.1) and the feedback loop (§4.5) follow the paper. The paper names
+              the eight glyph-chain operators but does not define them, so each operator here is a stand-in chosen for this
+              demo. Each layer is the identity at θ = 0, so you can ablate it.
             </p>
             <p>
               Subsystems: prompt P (1 qubit), context C (1 qubit), response R (candidates r₀–r₃). Response r₃ spans the
@@ -322,6 +294,7 @@ const PhiPipelineSimulator: React.FC = () => {
                 <button
                   type="button"
                   aria-pressed={selected === i}
+                  aria-label={`Step ${i}: ${stepName(s)}`}
                   onClick={() => setSelected(i)}
                   onPointerEnter={() => setHovered(i)}
                   onPointerLeave={() => setHovered(null)}
@@ -333,12 +306,18 @@ const PhiPipelineSimulator: React.FC = () => {
                 >
                   <Glyph className="block text-xl leading-7">{glyphs[i]}</Glyph>
                   <span className="block text-[9px] leading-tight text-slate-400 mt-1 [overflow-wrap:anywhere]">
-                    {s.kind === 'init'
-                      ? <>Quantum<wbr />MetaPrompt</>
-                      : s.kind === 'governance'
-                        ? 'Ethical projector'
-                        : (LAYERS[i - 1].codexName ?? 'unnamed')}
+                    {s.kind === 'init' ? (
+                      <>
+                        Quantum<wbr />
+                        MetaPrompt
+                      </>
+                    ) : s.kind === 'governance' ? (
+                      'Ethical projector'
+                    ) : (
+                      (LAYERS[s.layer ?? 0].codexName ?? 'unnamed')
+                    )}
                   </span>
+                  {s.pass > 1 && <span className="block text-[9px] leading-tight text-indigo-300 mt-0.5">pass {s.pass}</span>}
                 </button>
               </li>
             ))}
@@ -352,7 +331,7 @@ const PhiPipelineSimulator: React.FC = () => {
             aside={
               <button
                 type="button"
-                onClick={() => setParams(DEFAULT_PARAMS)}
+                onClick={() => loadParams(DEFAULT_PARAMS)}
                 className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-slate-300 transition-colors"
               >
                 <RotateCcw size={12} /> Defaults
@@ -360,7 +339,33 @@ const PhiPipelineSimulator: React.FC = () => {
             }
           >
             <div className="space-y-3">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Layer couplings θ</p>
+              <label className="block">
+                <span className="block text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Scenario</span>
+                <select
+                  value={scenario?.id ?? 'custom'}
+                  onChange={(e) => {
+                    const next = SCENARIOS.find((s) => s.id === e.target.value);
+                    if (next) loadParams(next.params);
+                  }}
+                  className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                >
+                  {SCENARIOS.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                  {!scenario && (
+                    <option value="custom" disabled>
+                      Custom settings
+                    </option>
+                  )}
+                </select>
+                <span className="block text-[11px] text-slate-500 mt-1.5">
+                  {scenario ? scenario.summary : 'Your own settings; pick a scenario to start from a known behaviour.'}
+                </span>
+              </label>
+
+              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold pt-2">Layer couplings θ</p>
               {LAYERS.map((layer, k) => (
                 <Slider
                   key={layer.codepoint}
@@ -374,11 +379,26 @@ const PhiPipelineSimulator: React.FC = () => {
                   value={params.thetas[k]}
                   min={0}
                   max={Math.PI}
-                  step={0.05}
+                  step={0.01}
                   digits={2}
                   onChange={(v) => setTheta(k, v)}
                 />
               ))}
+              <Slider
+                label={
+                  <>
+                    Synthesis passes{' '}
+                    <Glyph className="text-slate-400">{LAYERS.slice(SYNTHESIS_START).map((l) => l.glyph).join(' ')}</Glyph> (§3.4)
+                  </>
+                }
+                ariaLabel="Reasoning depth: number of passes through the synthesis layers"
+                value={params.depth}
+                min={1}
+                max={MAX_DEPTH}
+                step={1}
+                digits={0}
+                onChange={(v) => setParams((prev) => ({ ...prev, depth: v }))}
+              />
               <button
                 type="button"
                 onClick={() => setParams((prev) => ({ ...prev, thetas: LAYERS.map(() => 0) }))}
@@ -393,7 +413,7 @@ const PhiPipelineSimulator: React.FC = () => {
                 value={params.dephasing}
                 min={0}
                 max={0.1}
-                step={0.005}
+                step={0.001}
                 digits={3}
                 onChange={(v) => setParams((prev) => ({ ...prev, dephasing: v }))}
               />
@@ -423,7 +443,7 @@ const PhiPipelineSimulator: React.FC = () => {
 
           <div className="lg:col-span-2 space-y-6">
             <Panel title={`Step ${selected} of ${result.steps.length - 1}`} icon={<Gauge size={16} />}>
-              <StepDescription result={result} index={selected} params={params} />
+              <StepDescription result={result} step={step} params={params} />
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
                 <StatTile label="Response entropy H_R" value={m.responseEntropy.toFixed(2)} unit="bits" />
                 <StatTile label={`Confidence (${RESPONSE_LABELS[m.argmax]})`} value={m.confidence.toFixed(2)} />
@@ -459,7 +479,7 @@ const PhiPipelineSimulator: React.FC = () => {
               </div>
             </Panel>
 
-            <Panel title="Control logic" icon={<ShieldCheck size={16} />}>
+            <Panel title="Control logic (single pass)" icon={<ShieldCheck size={16} />}>
               <DecisionBanner result={result} />
               <ul className="mt-4 space-y-2">
                 {result.signals.map((s) => (
@@ -477,13 +497,26 @@ const PhiPipelineSimulator: React.FC = () => {
               </ul>
               <p className="text-[10px] text-slate-500 mt-3">
                 Thresholds are prototype values; the paper leaves calibration to empirical tuning (§5.3). Stability across
-                iterations, also a §4.7 criterion, is not modelled because this prototype runs a single pass.
+                iterations, the remaining §4.7 criterion, is checked by the feedback loop below.
               </p>
             </Panel>
           </div>
         </div>
 
-        <Panel title="Metric trajectories" icon={<Workflow size={16} />} aside={<span className="text-[10px] text-slate-500">Hover to inspect, click to select a step</span>}>
+        <FeedbackLoopPanel
+          loop={loop}
+          stale={loopStale}
+          budget={budget}
+          onBudgetChange={setBudget}
+          canLoad={!loopStale && !sameParams(loop.finalParams, params)}
+          onLoad={() => loadParams(loop.finalParams)}
+        />
+
+        <Panel
+          title="Metric trajectories"
+          icon={<Workflow size={16} />}
+          aside={<span className="text-[10px] text-slate-500">Hover to inspect, click to select a step</span>}
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {METRICS.map((def) => {
               const values = result.steps.map((s) => s.metrics[def.key]);
@@ -530,7 +563,7 @@ const PhiPipelineSimulator: React.FC = () => {
                     <tr key={i} className={`border-b border-slate-800/60 ${i === selected ? 'bg-indigo-900/20' : ''}`}>
                       <td className="py-1.5 pr-3 text-slate-300 whitespace-nowrap">
                         <Glyph className="mr-1.5">{glyphs[i]}</Glyph>
-                        {s.kind === 'layer' ? (LAYERS[i - 1].codexName ?? LAYERS[i - 1].codepoint) : s.label}
+                        {stepName(s)}
                       </td>
                       {METRICS.map((d) => (
                         <td key={d.key} className="text-right font-mono text-slate-400 tabular-nums py-1.5 px-2">

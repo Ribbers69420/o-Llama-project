@@ -107,7 +107,10 @@ export interface MultipleProps {
   selected: number;
   hovered: number | null;
   onHover: (step: number | null) => void;
-  onSelect: (step: number) => void;
+  /** Click handler for a step; columns are only clickable when it is given. */
+  onSelect?: (step: number) => void;
+  /** Word before the step label in the readout, e.g. "run" gives "at run 2". */
+  focusPrefix?: string;
 }
 
 export const MetricMultiple: React.FC<MultipleProps> = ({
@@ -123,15 +126,18 @@ export const MetricMultiple: React.FC<MultipleProps> = ({
   hovered,
   onHover,
   onSelect,
+  focusPrefix,
 }) => {
   const W = 260;
   const H = 104;
-  const m = { top: 8, right: 34, bottom: 20, left: 30 };
+  // The right margin fits a 6-character end label such as "−0.258".
+  const m = { top: 8, right: 44, bottom: 20, left: 30 };
   const plotW = W - m.left - m.right;
   const plotH = H - m.top - m.bottom;
   const [lo, hi] = domain;
-  const step = plotW / (values.length - 1);
-  const x = (i: number) => m.left + step * i;
+  // A single value sits in the middle of the plot.
+  const step = values.length > 1 ? plotW / (values.length - 1) : plotW;
+  const x = (i: number) => (values.length > 1 ? m.left + step * i : m.left + plotW / 2);
   const y = (v: number) => m.top + plotH * (1 - (v - lo) / (hi - lo || 1));
   const focus = hovered ?? selected;
   const fmt = (v: number) => v.toFixed(digits);
@@ -150,7 +156,8 @@ export const MetricMultiple: React.FC<MultipleProps> = ({
           <span className="text-sm font-semibold text-slate-100 tabular-nums">{fmt(values[focus])}</span>
           {unit && <span className="text-[10px] text-slate-500 ml-1">{unit}</span>}
           <div className="text-[10px] text-slate-500">
-            at <span style={{ fontFamily: GLYPH_FONT }}>{stepGlyphs[focus]}</span>
+            at {focusPrefix && `${focusPrefix} `}
+            <span style={{ fontFamily: GLYPH_FONT }}>{stepGlyphs[focus]}</span>
           </div>
         </div>
       </div>
@@ -197,7 +204,15 @@ export const MetricMultiple: React.FC<MultipleProps> = ({
           </text>
         )}
         {stepGlyphs.map((g, i) => (
-          <text key={i} x={x(i)} y={H - 5} textAnchor="middle" fontSize={9} fill={VIZ.textMuted} style={{ fontFamily: GLYPH_FONT }}>
+          <text
+            key={i}
+            x={x(i)}
+            y={H - 5}
+            textAnchor="middle"
+            fontSize={values.length > 12 ? 8 : 9}
+            fill={VIZ.textMuted}
+            style={{ fontFamily: GLYPH_FONT }}
+          >
             {g}
           </text>
         ))}
@@ -210,9 +225,9 @@ export const MetricMultiple: React.FC<MultipleProps> = ({
             width={step}
             height={H}
             fill="transparent"
-            style={{ cursor: 'pointer' }}
+            style={onSelect ? { cursor: 'pointer' } : undefined}
             onPointerEnter={() => onHover(i)}
-            onClick={() => onSelect(i)}
+            onClick={onSelect ? () => onSelect(i) : undefined}
           />
         ))}
       </svg>
