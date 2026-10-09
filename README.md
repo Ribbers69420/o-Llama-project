@@ -1,82 +1,158 @@
-# Quantum-Viz — Enterprise Quantum-Interface Visualizer
+# o-Llama-project (`quantum-viz`)
 
-An interactive React + TypeScript visualizer for the **Unified Quantum-Cognitive
-Framework (UQCF)**. The app renders the framework's layered architecture as an
-explorable tree: each node is a system component carrying performance metrics
-(computational efficiency, scalability, resilience), a security profile
-(integrity, compliance, risk mitigation), and "quantum potential" indicators
-(superposition capacity, entanglement coefficients, coherence). Components expand
-to reveal detailed metric bars and use quantum notation such as $|\Psi_0\rangle$,
-superposition, entanglement, and coherence throughout.
+A Vite + React 19 + TypeScript + Tailwind CSS v4 prototype with three interactive views, together with the
+**Unified Quantum-Cognitive Framework (UQCF)** whitepaper and a few supporting documents.
 
-The visualizer is a concrete, interactive instantiation of the theory described
-in [`UQCF.tex`](./UQCF.tex): the Φ-layer cascade, the prompt–context–response
-subsystem structure, coherence-aware traversal, and governance-driven metrics all
-have direct counterparts in the on-screen component hierarchy and its scoring.
+> **Status.** The paper ([`UQCF.tex`](./UQCF.tex)) is the design and theory document.
+> The **Φ Pipeline** view is a working prototype of its operational pipeline, including the feedback loop.
+> It runs a real numerical simulation, but on a toy state space, and its eight glyph operators are
+> stand-ins: the paper names them without defining them. The **Visualizer** and **Unified System**
+> views run on sample data. CI checks the app and compiles the paper on every pull request.
 
-## Theoretical Foundation
+## What is in the repo
 
-The whitepaper at [`UQCF.tex`](./UQCF.tex) is the design document for this
-project. It develops a single synthesis in two registers:
+| Path | What it is |
+|------|------------|
+| `src/App.tsx` | Nav that switches between the three views |
+| `src/components/PhiPipelineSimulator.tsx`, `FeedbackLoopPanel.tsx`, `PipelineCharts.tsx`, `pipelineUi.tsx` | **Φ Pipeline** view, described below |
+| `src/uqcf/` | Simulation core for the Φ Pipeline view: complex linear algebra (`linalg.ts`), the pipeline (`pipeline.ts`), the feedback loop (`feedbackLoop.ts`), scenario presets (`scenarios.ts`), and their tests |
+| `src/assets/fonts/` | Two small subsets of Noto Sans Symbols / Noto Sans Math, so the glyphs render on any device (OFL-1.1, see `OFL.txt`) |
+| `src/components/EnterpriseQuantumVisualizer.tsx` | **Visualizer** view: a collapsible tree rooted at |Ψ₀⟩ (Security Substrate, Operations Fabric, Cognitive Engine, and their sub-components). Nodes show performance bars (efficiency, scalability, resilience), a security profile (integrity, risk mitigation) and superposition / entanglement indicators. A placeholder "Ethical Constraint Module" is deliberately flagged as an integrity gap. All values are sample data. |
+| `src/components/UnifiedSystemComponent.tsx` | **Unified System** view: a validated form for Domain / Constraints / Objectives / Advantages. Runs in memory unless an `onSubmit` prop is supplied. |
+| `src/monicaAIInstructions.ts` | Monica AI assistant system instructions plus TypeScript interfaces for ethical / quantum validation. Not imported by the UI. |
+| [`UQCF.tex`](./UQCF.tex) | The UQCF whitepaper (LaTeX source) |
+| `.github/workflows/ci.yml` | CI: app checks and the PDF build, described below |
+| `docs/realtime-api-guide.md`, `python/realtime_session.py` | De-duplicated OpenAI Realtime API guide and a cleaned-up Python session-manager example |
+| `scripts/quality-check.mjs`, [`QUALITY_REPORT.md`](./QUALITY_REPORT.md) | Dataset analyser (paragraph de-duplication and code lints) and the report on the dataset it was used to clean up |
 
-- **A formal theory** of cognition-inspired state evolution in a Hilbert space —
-  unitary Φ-layer transformations, controlled collapse, density-operator
-  subsystems, interference as context-sensitive selection, and a suite of
-  evaluation metrics (entanglement entropy, purity/coherence, response entropy,
-  fidelity, mutual information, and an ethical risk index).
-- **A systems architecture** — the quantum-fractal knowledge architecture:
-  graph-structured memory, golden-ratio (φ) layer stratification,
-  semantic-preserving compression, entanglement-inspired relationship scoring,
-  adaptive resource allocation, and governance enforced at the substrate level.
+## Run the app
 
-The component layers shown in the visualizer (Core, Cognitive, Security,
-Integration, Optimization) map onto the framework's functional families described
-in §3 and §6 of the paper. Treat `UQCF.tex` as the source of truth for *why* the
-interface is organised the way it is.
-
-### Building the paper (optional)
-
-`UQCF.tex` uses `fontspec` + `babel` with the Noto Serif font, so it must be
-compiled with a Unicode engine (LuaLaTeX or XeLaTeX) rather than pdfLaTeX:
-
-```bash
-lualatex UQCF.tex      # or: xelatex UQCF.tex
-```
-
-This is not part of the app build — it is only needed if you want a typeset PDF
-of the whitepaper.
-
-## Running the app
-
-Requires Node.js. Install dependencies and start the dev server:
+Requires Node.js 20.19+ or 22.12+ (a Vite 7 requirement; tested on Node 22).
 
 ```bash
 npm install
-npm run dev        # start Vite dev server with HMR
+npm run dev        # Vite dev server with HMR
+npm run build      # type-check (tsc -b) and production build into dist/
+npm run preview    # serve the production build
+npm run lint       # ESLint
+npm test           # Vitest: simulation-core and feedback-loop tests
 ```
 
-Other useful scripts:
+Dataset analyser: `node scripts/quality-check.mjs <file>`.
+
+## The Φ Pipeline view
+
+The view runs the paper's operational pipeline (§4) on a 16-dimensional density operator for
+H = H_P ⊗ H_C ⊗ H_R:
+
+- P is the prompt (1 qubit).
+- C is the context (1 qubit).
+- R is the response (4 candidates, r₀–r₃).
+- r₃ spans the disallowed subspace.
+
+It recomputes everything whenever a parameter changes:
+
+1. **QuantumMetaPrompt** (§4.2): the initial state is |0⟩_P ⊗ |0⟩_C ⊗ |s⟩_R, with a uniform (neutral) response.
+2. **Glyph chain** 🜂 → 🜄 → 🝞 → ⟠ → ⦾ → 🜿 → 🝏 → 🝪 (§3.6): eight unitaries. Each has a slider for its
+   coupling θ and is the identity at θ = 0, so any layer can be ablated. Optional dephasing after
+   every layer models decoherence (§2.6).
+3. **Reasoning depth** (§3.4): the synthesis layers ⦾ 🜿 🝏 🝪 can run up to three times ("multiple
+   recursive passes through more integrative synthesis layers").
+4. **Ethical projector** (§4.4): if p_unsafe = Tr(Ê_block ρ) exceeds ε, the state is either projected
+   into the allowed subspace or the pipeline fails closed.
+5. **Metrics** (§5) at every step: H_R and confidence, S_ent(P), I(C;R), purity γ, fidelity F, D_KL,
+   p_unsafe, and the control functional J.
+6. **Single-pass control logic** (§4.7, §5.1): threshold signals, and a verdict to collapse to an answer,
+   iterate, or refuse.
+7. **Feedback loop** (§4.5): runs the whole pipeline repeatedly. While a termination criterion fails, it
+   applies the §5.1 remedy for the most fundamental failure:
+   - coherence: reduce branching;
+   - context binding: strengthen binding, then revise retrieval;
+   - response confidence or stability: add a synthesis pass, then tune answer shaping.
+
+   A change is kept only if J falls; otherwise it is rolled back (§4.1) and that remedy is not tried
+   again. The loop ends in one of three ways:
+   - it collapses to a stable answer;
+   - it refuses under the fail-closed policy;
+   - it abstains (§2.2), when the run budget is spent or no remedy is left (non-recoverable, §4.6).
+
+   Every run is listed with the failure that triggered it and the parameter it changed.
+
+The **Scenario** menu loads presets that each show one loop behaviour:
+
+- converging after an extra pass (the default);
+- converging at once;
+- strengthening weak context binding;
+- rolling back a remedy that backfires;
+- reducing depth under noise;
+- abstaining when coherence cannot be recovered;
+- refusing under the fail-closed policy.
+
+The tests in `src/uqcf/feedbackLoop.test.ts` check that every preset still behaves as described.
+
+What is a prototype choice rather than the paper's definition:
+
+- The eight operators: the Codex Harmonicus names and functions are shown next to each, but the matrices are stand-ins.
+- The fidelity target: the same run without decoherence.
+- The D_KL baseline: the previous step.
+- All thresholds, and the J weights (all 1).
+- How each loop remedy acts: which parameter it changes, coupling steps of 0.3 rad, depth steps of 1.
+- The J-based rollback, and the stability test: a deterministic re-run is identical, so stability means the
+  same answer, and a total-variation drift of at most 0.1, when every coupling is scaled by 0.95 and 1.05.
+- The default couplings and the presets: found by seeded searches for runs that show each behaviour. They
+  carry no other meaning.
+
+The view also has a table of every metric at every step, with definitions.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`:
+
+- **App**: `npm ci`, `npm run lint`, `npm test`, `npm run build`.
+- **Paper**: installs LuaLaTeX and the fonts below on Ubuntu 24.04, then compiles `UQCF.tex` three times.
+  It fails if any glyph is missing from its font or any reference is undefined.
+
+Each run attaches the compiled PDF: open the run in the **Actions** tab and download **UQCF-pdf** under
+*Artifacts*.
+
+## Build the whitepaper locally (optional)
+
+`UQCF.tex` needs a Unicode TeX engine: **LuaLaTeX or XeLaTeX** (not pdfLaTeX). Both were tested on
+TeX Live 2023 (babel 24.1) and produce a 34-page PDF. Run it three times so the table of contents and
+cross-references settle, or use `latexmk`:
 
 ```bash
-npm run build      # type-check and produce a production build in dist/
-npm run preview    # serve the production build locally
-npm run lint       # run ESLint
+lualatex UQCF.tex                  # run 3x, or: latexmk -lualatex UQCF.tex
+xelatex  UQCF.tex                  # also works
 ```
 
-## Project structure
+Fonts used (Debian / Ubuntu package in brackets):
 
-```
-.
-├── UQCF.tex                                  # Unified Quantum-Cognitive Framework whitepaper (design doc)
-├── index.html                                # Vite entry HTML
-├── src/
-│   ├── App.tsx                               # Renders the visualizer
-│   ├── components/
-│   │   └── EnterpriseQuantumVisualizer.tsx   # Core interactive tree visualization
-│   └── monicaAIInstructions.ts               # AI assistant system instructions
-└── ...                                       # Vite / TypeScript / ESLint config
-```
+- **Noto Serif**: body text (`fonts-noto-core`)
+- **Noto Sans Symbols**: the alchemical operator glyphs 🜂 🜄 🝞 🜿 🝏 🝪 (`fonts-noto-extra`)
+- **Noto Sans Math**: the glyphs ⟠ and ⦾ (`fonts-noto-core`)
+- **Latin Modern Mono**: monospace text (`fonts-lmodern`)
 
-## Stack
+If a glyph font is missing the document still compiles; those glyphs then appear as missing-character boxes.
+LaTeX build by-products are git-ignored. The build is not part of the app build.
 
-React 19, TypeScript, Vite, TailwindCSS, and lucide-react for icons.
+## Open questions for the author
+
+These are content decisions about the framework itself. They are recorded here so they are not lost:
+
+1. **Glyph-operator definitions.** The paper names the eight glyph operators but does not define what
+   each one does. The app uses labelled stand-ins until definitions exist.
+2. **Unnamed glyphs.** 🝞 and ⟠ have no entry in the Codex Harmonicus mapping.
+3. **Chain order.** The canonical chain lists 🜿 (φ⁸–φ¹⁰) before 🝏 (φ³–φ⁶), so its order does not follow
+   φ-layer order.
+4. **Glyph composition.** The originally pasted composition had four factors, with 🜂 twice. The paper now
+   uses the full eight-glyph chain; confirm this is the intent.
+5. **Layer count.** §6.2 says 24 hierarchical layers, but the tables and lists cover only φ⁰–φ⁷.
+6. **Complexity figures.** The φ⁴–φ⁷ traversal is O(n log n) in Table 3, but the §6.4 list gives O(n^1.5)
+   for φ⁴–φ⁵ and O(n²) for φ⁶–φ⁷.
+7. **Projection dimension.** The projection Φ: ℝ^d → ℝ^{d·φ^n} gives non-integer dimensions.
+8. **Typographic registers.** The original Script/Fraktur font-family design (`\scriptfont` and similar)
+   was removed because `\scriptfont` is a TeX primitive. It could be restored under different names.
+9. **Date.** The paper's date still reads May 2025.
+10. **Calibration.** The thresholds, J weights and remedy step sizes are prototype values; the paper leaves
+    calibration to empirical tuning (§5.3).

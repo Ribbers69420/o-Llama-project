@@ -435,7 +435,7 @@ const EnterpriseQuantumVisualizer: React.FC = () => {
                 </h1>
               </div>
               <p className="text-slate-500 font-mono text-xs">
-                System State |\u03A8_0\u27E9 &bull; AES-256 &bull; HA-3 &bull; ML-Optimized
+                System State {'|\u03A8_0\u27E9'} &bull; AES-256 &bull; HA-3 &bull; ML-Optimized
               </p>
             </div>
 

@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* Glyph-chain operators: tiny subsets of Noto Sans Symbols and Noto Sans Math
+   (OFL-1.1, see src/assets/fonts/OFL.txt), so they render without system fonts. */
+@font-face {
+  font-family: 'UQCF Glyphs';
+  src: url('./assets/fonts/uqcf-alchemical.woff2') format('woff2');
+  unicode-range: U+1F702, U+1F704, U+1F73F, U+1F74F, U+1F75E, U+1F76A;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'UQCF Glyphs';
+  src: url('./assets/fonts/uqcf-math-glyphs.woff2') format('woff2');
+  unicode-range: U+27E0, U+29BE;
+  font-display: swap;
+}
+
 @theme {
   --color-slate-950: #020617;
   --color-slate-900: #0f172a;
@@ -23,4 +39,15 @@
 
 body {
   margin: 0;
+}
+
+/* Honour the system "reduce motion" setting: no spinning or pulsing indicators. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

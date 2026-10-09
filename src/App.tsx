@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import EnterpriseQuantumVisualizer from './components/EnterpriseQuantumVisualizer';
 import UnifiedSystemComponent from './components/UnifiedSystemComponent';
+import PhiPipelineSimulator from './components/PhiPipelineSimulator';
 import './index.css';
 
-type View = 'visualizer' | 'unified';
+type View = 'visualizer' | 'unified' | 'pipeline';
 
 function App() {
   const [view, setView] = useState<View>('visualizer');
 
   return (
     <div className="relative min-h-screen bg-slate-950">
-      <nav className="fixed top-3 right-3 z-50 flex gap-1 p-1 bg-slate-900/90 backdrop-blur border border-slate-700 rounded-lg shadow-xl">
+      {/* A sticky bar on phones so it cannot cover page headers; floating top-right from md up.
+          The safe-area inset keeps it below a phone's status bar when the page runs edge to edge. */}
+      <nav className="sticky top-[env(safe-area-inset-top,0px)] md:fixed md:top-3 md:right-3 z-50 flex justify-center md:justify-start gap-1 p-1 bg-slate-900/90 backdrop-blur border-b md:border border-slate-700 md:rounded-lg shadow-xl">
         <button
           type="button"
           onClick={() => setView('visualizer')}
@@ -33,9 +36,22 @@ function App() {
         >
           UNIFIED SYSTEM
         </button>
+        <button
+          type="button"
+          onClick={() => setView('pipeline')}
+          className={`px-3 py-1.5 text-[11px] font-mono rounded transition-colors ${
+            view === 'pipeline'
+              ? 'bg-indigo-600 text-white'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+          }`}
+        >
+          Φ PIPELINE
+        </button>
       </nav>
 
-      {view === 'visualizer' ? <EnterpriseQuantumVisualizer /> : <UnifiedSystemComponent />}
+      {view === 'visualizer' && <EnterpriseQuantumVisualizer />}
+      {view === 'unified' && <UnifiedSystemComponent />}
+      {view === 'pipeline' && <PhiPipelineSimulator />}
     </div>
   );
 }
