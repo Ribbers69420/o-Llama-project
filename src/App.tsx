@@ -11,8 +11,9 @@ function App() {
 
   return (
     <div className="relative min-h-screen bg-slate-950">
-      {/* A sticky bar on phones so it cannot cover page headers; floating top-right from md up. */}
-      <nav className="sticky top-0 md:fixed md:top-3 md:right-3 z-50 flex justify-center md:justify-start gap-1 p-1 bg-slate-900/90 backdrop-blur border-b md:border border-slate-700 md:rounded-lg shadow-xl">
+      {/* A sticky bar on phones so it cannot cover page headers; floating top-right from md up.
+          The safe-area inset keeps it below a phone's status bar when the page runs edge to edge. */}
+      <nav className="sticky top-[env(safe-area-inset-top,0px)] md:fixed md:top-3 md:right-3 z-50 flex justify-center md:justify-start gap-1 p-1 bg-slate-900/90 backdrop-blur border-b md:border border-slate-700 md:rounded-lg shadow-xl">
         <button
           type="button"
           onClick={() => setView('visualizer')}
