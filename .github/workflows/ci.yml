@@ -1,0 +1,71 @@
+# Runs on every pull request and on pushes to main.
+# app:   the checks a contributor runs locally (lint, unit tests, type-check + build).
+# paper: compiles UQCF.tex with LuaLaTeX, fails on missing glyphs or undefined
+#        references, and attaches the PDF to the run (Actions tab → run → Artifacts).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: App (lint, test, build)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  paper:
+    name: Paper (UQCF.tex to PDF)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LuaLaTeX and the fonts the paper uses
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-luatex texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended fonts-lmodern fontconfig fonts-noto-core fonts-noto-extra
+      - name: Build UQCF.pdf
+        # Three passes so the table of contents and cross-references settle.
+        run: |
+          for pass in 1 2 3; do
+            lualatex -interaction=nonstopmode -halt-on-error UQCF.tex > lualatex.out 2>&1 \
+              || { tail -n 80 UQCF.log; exit 1; }
+          done
+          grep '^Output written' UQCF.log
+      - name: Check for missing glyphs and undefined references
+        run: |
+          status=0
+          if grep -q 'Missing character' UQCF.log; then
+            echo '::error::Glyphs missing from the fonts:'
+            grep 'Missing character' UQCF.log | sort | uniq -c
+            status=1
+          fi
+          if grep -E -q 'There were undefined references|Reference .* undefined|Citation .* undefined' UQCF.log; then
+            echo '::error::Undefined references or citations:'
+            grep -E 'undefined' UQCF.log
+            status=1
+          fi
+          exit $status
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UQCF-pdf
+          path: UQCF.pdf
+          if-no-files-found: error
