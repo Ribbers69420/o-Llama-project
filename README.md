@@ -1,82 +1,54 @@
-# Quantum-Viz — Enterprise Quantum-Interface Visualizer
+# o-Llama-project (`quantum-viz`)
 
-An interactive React + TypeScript visualizer for the **Unified Quantum-Cognitive
-Framework (UQCF)**. The app renders the framework's layered architecture as an
-explorable tree: each node is a system component carrying performance metrics
-(computational efficiency, scalability, resilience), a security profile
-(integrity, compliance, risk mitigation), and "quantum potential" indicators
-(superposition capacity, entanglement coefficients, coherence). Components expand
-to reveal detailed metric bars and use quantum notation such as $|\Psi_0\rangle$,
-superposition, entanglement, and coherence throughout.
+A Vite + React 19 + TypeScript + Tailwind CSS v4 prototype with two interactive views, together with the
+**Unified Quantum-Cognitive Framework (UQCF)** whitepaper and a few supporting documents.
 
-The visualizer is a concrete, interactive instantiation of the theory described
-in [`UQCF.tex`](./UQCF.tex): the Φ-layer cascade, the prompt–context–response
-subsystem structure, coherence-aware traversal, and governance-driven metrics all
-have direct counterparts in the on-screen component hierarchy and its scoring.
+> **Status.** The UI runs on hard-coded sample data and does not compute any UQCF quantity yet. The paper
+> ([`UQCF.tex`](./UQCF.tex)) is the design and theory document; the app shares its vocabulary
+> (|Ψ₀⟩, superposition, entanglement) but does not implement the Φ-layers, the metrics, or the glyph chain.
 
-## Theoretical Foundation
+## What is in the repo
 
-The whitepaper at [`UQCF.tex`](./UQCF.tex) is the design document for this
-project. It develops a single synthesis in two registers:
+| Path | What it is |
+|------|------------|
+| `src/App.tsx` | Floating nav that switches between the two views |
+| `src/components/EnterpriseQuantumVisualizer.tsx` | **Visualizer** view: a collapsible tree rooted at |Ψ₀⟩ (Security Substrate, Operations Fabric, Cognitive Engine, and their sub-components). Nodes show performance bars (efficiency, scalability, resilience), a security profile (integrity, risk mitigation) and superposition / entanglement indicators. A placeholder "Ethical Constraint Module" is deliberately flagged as an integrity gap. All values are sample data. |
+| `src/components/UnifiedSystemComponent.tsx` | **Unified System** view: a validated form for Domain / Constraints / Objectives / Advantages. Runs in memory unless an `onSubmit` prop is supplied. |
+| `src/monicaAIInstructions.ts` | Monica AI assistant system instructions plus TypeScript interfaces for ethical / quantum validation. Not imported by the UI. |
+| [`UQCF.tex`](./UQCF.tex) | The UQCF whitepaper (LaTeX source) |
+| `docs/realtime-api-guide.md`, `python/realtime_session.py` | De-duplicated OpenAI Realtime API guide and a cleaned-up Python session-manager example |
+| `scripts/quality-check.mjs`, [`QUALITY_REPORT.md`](./QUALITY_REPORT.md) | Dataset analyser (paragraph de-duplication and code lints) and the report on the dataset it was used to clean up |
 
-- **A formal theory** of cognition-inspired state evolution in a Hilbert space —
-  unitary Φ-layer transformations, controlled collapse, density-operator
-  subsystems, interference as context-sensitive selection, and a suite of
-  evaluation metrics (entanglement entropy, purity/coherence, response entropy,
-  fidelity, mutual information, and an ethical risk index).
-- **A systems architecture** — the quantum-fractal knowledge architecture:
-  graph-structured memory, golden-ratio (φ) layer stratification,
-  semantic-preserving compression, entanglement-inspired relationship scoring,
-  adaptive resource allocation, and governance enforced at the substrate level.
+## Run the app
 
-The component layers shown in the visualizer (Core, Cognitive, Security,
-Integration, Optimization) map onto the framework's functional families described
-in §3 and §6 of the paper. Treat `UQCF.tex` as the source of truth for *why* the
-interface is organised the way it is.
-
-### Building the paper (optional)
-
-`UQCF.tex` uses `fontspec` + `babel` with the Noto Serif font, so it must be
-compiled with a Unicode engine (LuaLaTeX or XeLaTeX) rather than pdfLaTeX:
-
-```bash
-lualatex UQCF.tex      # or: xelatex UQCF.tex
-```
-
-This is not part of the app build — it is only needed if you want a typeset PDF
-of the whitepaper.
-
-## Running the app
-
-Requires Node.js. Install dependencies and start the dev server:
+Requires Node.js 20.19+ or 22.12+ (a Vite 7 requirement; tested on Node 22).
 
 ```bash
 npm install
-npm run dev        # start Vite dev server with HMR
+npm run dev        # Vite dev server with HMR
+npm run build      # type-check (tsc -b) and production build into dist/
+npm run preview    # serve the production build
+npm run lint       # ESLint
 ```
 
-Other useful scripts:
+Dataset analyser: `node scripts/quality-check.mjs <file>`.
+
+## Build the whitepaper (optional)
+
+`UQCF.tex` needs a Unicode TeX engine: **LuaLaTeX or XeLaTeX** (not pdfLaTeX). Both were tested on
+TeX Live 2023 (babel 24.1) and produce a 34-page PDF. Run it three times so the table of contents and
+cross-references settle, or use `latexmk`:
 
 ```bash
-npm run build      # type-check and produce a production build in dist/
-npm run preview    # serve the production build locally
-npm run lint       # run ESLint
+lualatex UQCF.tex                  # run 3x, or: latexmk -lualatex UQCF.tex
+xelatex  UQCF.tex                  # also works
 ```
 
-## Project structure
+Fonts used (Debian / Ubuntu package in brackets):
 
-```
-.
-├── UQCF.tex                                  # Unified Quantum-Cognitive Framework whitepaper (design doc)
-├── index.html                                # Vite entry HTML
-├── src/
-│   ├── App.tsx                               # Renders the visualizer
-│   ├── components/
-│   │   └── EnterpriseQuantumVisualizer.tsx   # Core interactive tree visualization
-│   └── monicaAIInstructions.ts               # AI assistant system instructions
-└── ...                                       # Vite / TypeScript / ESLint config
-```
+- **Noto Serif**: body text (`fonts-noto-core`)
+- **Noto Sans Symbols**: the alchemical operator glyphs 🜂 🜄 🝞 🜿 🝏 🝪 (`fonts-noto-extra`)
+- **Noto Sans Math**: the glyphs ⟠ and ⦾ (`fonts-noto-core`)
 
-## Stack
-
-React 19, TypeScript, Vite, TailwindCSS, and lucide-react for icons.
+If a glyph font is missing the document still compiles; those glyphs then appear as missing-character boxes.
+LaTeX build by-products are git-ignored. The build is not part of the app build.

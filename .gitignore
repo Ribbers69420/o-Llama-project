@@ -12,6 +12,15 @@ dist
 dist-ssr
 *.local
 
+# LaTeX build by-products (UQCF.tex); *.log is covered above
+*.aux
+*.toc
+*.out
+*.xdv
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
