@@ -14,8 +14,10 @@ export const Panel: React.FC<{
   icon: React.ReactNode;
   children: React.ReactNode;
   aside?: React.ReactNode;
-}> = ({ title, icon, children, aside }) => (
-  <section className="bg-slate-900/50 rounded-xl border border-slate-800 p-5 shadow-2xl">
+  id?: string;
+}> = ({ title, icon, children, aside, id }) => (
+  // scroll-mt keeps a panel scrolled into view clear of the sticky menu.
+  <section id={id} className="bg-slate-900/50 rounded-xl border border-slate-800 p-5 shadow-2xl scroll-mt-16">
     <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
       <h2 className="text-sm font-bold flex items-center gap-2 text-slate-200">
         <span className="text-slate-400">{icon}</span>

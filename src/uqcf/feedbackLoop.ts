@@ -15,7 +15,9 @@
 import {
   LAYERS,
   MAX_DEPTH,
+  clampDepth,
   failedCriteria,
+  formatVs,
   runPipeline,
   type CriterionFailure,
   type PipelineParams,
@@ -54,6 +56,23 @@ const raise = (k: number) => (p: PipelineParams): PipelineParams => ({
   ...p,
   thetas: p.thetas.map((t, i) => (i === k ? Math.min(Math.PI, t + THETA_STEP) : t)),
 });
+/**
+ * 🜄 hands the prompt to the context with strength sin²θ, which peaks at
+ * θ = π/2 (+ kπ). Raising θ past that peak would weaken the update, so this
+ * remedy moves θ towards a peak instead: π/2 within the sliders' range 0…π,
+ * otherwise the nearest one.
+ */
+const retrievalPeak = (t: number) =>
+  t >= 0 && t <= Math.PI ? Math.PI / 2 : Math.PI / 2 + Math.PI * Math.round((t - Math.PI / 2) / Math.PI);
+const canStrengthenRetrieval = (p: PipelineParams) => Math.abs(p.thetas[RETRIEVE] - retrievalPeak(p.thetas[RETRIEVE])) > 1e-9;
+const strengthenRetrieval = (p: PipelineParams): PipelineParams => ({
+  ...p,
+  thetas: p.thetas.map((t, i) => {
+    if (i !== RETRIEVE) return t;
+    const peak = retrievalPeak(t);
+    return t < peak ? Math.min(peak, t + THETA_STEP) : Math.max(peak, t - THETA_STEP);
+  }),
+});
 const thetaChange = (k: number) => (a: PipelineParams, b: PipelineParams) =>
   `θ(${LAYERS[k].glyph}) ${a.thetas[k].toFixed(2)} → ${b.thetas[k].toFixed(2)}`;
 const depthChange = (a: PipelineParams, b: PipelineParams) => `depth ${a.depth} → ${b.depth}`;
@@ -76,8 +95,8 @@ export const REMEDIES: Record<RemedyId, Remedy> = {
   'revise-retrieval': {
     label: 'Revise retrieval: stronger prompt–context update',
     section: '§5.1',
-    applicable: canRaise(RETRIEVE),
-    apply: raise(RETRIEVE),
+    applicable: canStrengthenRetrieval,
+    apply: strengthenRetrieval,
     change: thetaChange(RETRIEVE),
   },
   deepen: {
@@ -136,7 +155,9 @@ const totalVariation = (p: number[], q: number[]): number => 0.5 * p.reduce((s, 
 
 export const checkStability = (params: PipelineParams, reference: StepMetrics): StabilityCheck => {
   const probes = [1 - PERTURBATION, 1 + PERTURBATION].map((scale): StabilityProbe => {
-    const r = runPipeline({ ...params, thetas: params.thetas.map((t) => Math.min(Math.PI, t * scale)) });
+    // No cap at π: every layer is a valid unitary for any θ, and a cap would leave
+    // couplings near π unperturbed.
+    const r = runPipeline({ ...params, thetas: params.thetas.map((t) => t * scale) });
     const m = r.steps[r.steps.length - 1].metrics;
     return {
       scale,
@@ -197,7 +218,8 @@ export interface LoopResult {
 }
 
 const chooseRemedy = (failures: Failure[], params: PipelineParams, blocked: Set<RemedyId>) => {
-  // Remedy the most fundamental failure first; lower-priority fixes cannot repair it.
+  // Policy: remedy only the most fundamental failure. Fixing a lower-priority
+  // criterion first might happen to help, but the loop does not guess.
   const [first] = failures;
   if (!first) return null;
   const id = REMEDIES_FOR[first.id].find((r) => !blocked.has(r) && REMEDIES[r].applicable(params));
@@ -209,13 +231,14 @@ export const runFeedbackLoop = (initial: PipelineParams, budget = DEFAULT_BUDGET
   const iterations: LoopIteration[] = [];
   const blocked = new Set<RemedyId>();
   let best: LoopIteration | null = null;
-  let params = initial;
+  // The depth remedies step the number of passes the pipeline actually runs.
+  let params: PipelineParams = { ...initial, depth: clampDepth(initial.depth) };
   let adjustment: Adjustment | null = null;
 
   const finish = (outcome: LoopOutcome): LoopResult => ({
     iterations,
     outcome,
-    finalParams: best?.params ?? initial,
+    finalParams: best?.params ?? params,
   });
 
   for (let index = 1; index <= runs; index++) {
@@ -244,7 +267,9 @@ export const runFeedbackLoop = (initial: PipelineParams, budget = DEFAULT_BUDGET
         stability = checkStability(params, final);
         if (!stability.stable) {
           const drift = Math.max(...stability.probes.map((p) => p.drift));
-          failures = [{ id: 'unstable', reason: `answer not stable under ±${PERTURBATION * 100}% couplings (drift ${drift.toFixed(2)})` }];
+          failures = [
+            { id: 'unstable', reason: `answer not stable under ±${PERTURBATION * 100}% couplings (drift ${formatVs(drift, MAX_DRIFT)})` },
+          ];
         }
       }
       const iteration: LoopIteration = { ...base, failures, stability, status: 'accepted' };

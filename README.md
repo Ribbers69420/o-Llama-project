@@ -35,7 +35,7 @@ npm run dev        # Vite dev server with HMR
 npm run build      # type-check (tsc -b) and production build into dist/
 npm run preview    # serve the production build
 npm run lint       # ESLint
-npm test           # Vitest: simulation-core and feedback-loop tests
+npm test           # Vitest: simulation-core, feedback-loop and chart tests
 ```
 
 Dataset analyser: `node scripts/quality-check.mjs <file>`.
@@ -67,7 +67,8 @@ It recomputes everything whenever a parameter changes:
 7. **Feedback loop** (§4.5): runs the whole pipeline repeatedly. While a termination criterion fails, it
    applies the §5.1 remedy for the most fundamental failure:
    - coherence: reduce branching;
-   - context binding: strengthen binding, then revise retrieval;
+   - context binding: strengthen binding, then revise retrieval (move 🜄's coupling towards θ = π/2,
+     where its prompt-to-context transfer sin²θ peaks);
    - response confidence or stability: add a synthesis pass, then tune answer shaping.
 
    A change is kept only if J falls; otherwise it is rolled back (§4.1) and that remedy is not tried
@@ -75,6 +76,7 @@ It recomputes everything whenever a parameter changes:
    - it collapses to a stable answer;
    - it refuses under the fail-closed policy;
    - it abstains (§2.2), when the run budget is spent or no remedy is left (non-recoverable, §4.6).
+     The loop only remedies the most fundamental failure; it does not try lower-priority fixes instead.
 
    Every run is listed with the failure that triggered it and the parameter it changed.
 

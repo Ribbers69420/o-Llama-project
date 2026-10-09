@@ -384,6 +384,19 @@ export type Decision =
   | { kind: 'continue'; reasons: string[] }
   | { kind: 'refuse'; reason: string };
 
+/**
+ * Formats a value for a comparison with a threshold. It uses `digits` decimals,
+ * or more when rounding would put the shown value on the wrong side of the
+ * threshold: 0.104 against 0.1 prints "0.104", not "0.10".
+ */
+export const formatVs = (value: number, threshold: number, digits = 2): string => {
+  for (let d = digits; d < 6; d++) {
+    const shown = value.toFixed(d);
+    if (Math.sign(Number(shown) - threshold) === Math.sign(value - threshold)) return shown;
+  }
+  return value.toFixed(6);
+};
+
 /** A failed termination criterion (§4.7), listed in the order the loop remedies them. */
 export interface CriterionFailure {
   id: 'coherence' | 'binding' | 'diffuse' | 'unsafe';
@@ -396,21 +409,21 @@ export interface CriterionFailure {
  * Stability across iterations is checked by the feedback loop.
  */
 export const failedCriteria = (m: StepMetrics, epsilon: number): CriterionFailure[] => {
-  const fmt = (x: number) => x.toFixed(2);
+  const T = THRESHOLDS;
   const failures: CriterionFailure[] = [];
-  if (m.purity < THRESHOLDS.minPurity) {
-    failures.push({ id: 'coherence', reason: `γ ${m.purity.toFixed(3)} < ${THRESHOLDS.minPurity}` });
+  if (m.purity < T.minPurity) {
+    failures.push({ id: 'coherence', reason: `γ ${formatVs(m.purity, T.minPurity, 3)} < ${T.minPurity}` });
   }
-  if (m.mutualInfo < THRESHOLDS.minMutualInfo) {
-    failures.push({ id: 'binding', reason: `I(C;R) ${fmt(m.mutualInfo)} bits < ${THRESHOLDS.minMutualInfo}` });
+  if (m.mutualInfo < T.minMutualInfo) {
+    failures.push({ id: 'binding', reason: `I(C;R) ${formatVs(m.mutualInfo, T.minMutualInfo)} bits < ${T.minMutualInfo}` });
   }
   const diffuse: string[] = [];
-  if (m.confidence < THRESHOLDS.minConfidence) diffuse.push(`confidence ${fmt(m.confidence)} < ${THRESHOLDS.minConfidence}`);
-  if (m.responseEntropy > THRESHOLDS.maxResponseEntropy) {
-    diffuse.push(`H_R ${fmt(m.responseEntropy)} bits > ${THRESHOLDS.maxResponseEntropy}`);
+  if (m.confidence < T.minConfidence) diffuse.push(`confidence ${formatVs(m.confidence, T.minConfidence)} < ${T.minConfidence}`);
+  if (m.responseEntropy > T.maxResponseEntropy) {
+    diffuse.push(`H_R ${formatVs(m.responseEntropy, T.maxResponseEntropy)} bits > ${T.maxResponseEntropy}`);
   }
   if (diffuse.length) failures.push({ id: 'diffuse', reason: diffuse.join(', ') });
-  if (m.pUnsafe > epsilon) failures.push({ id: 'unsafe', reason: `p_unsafe ${m.pUnsafe.toFixed(3)} > ε` });
+  if (m.pUnsafe > epsilon) failures.push({ id: 'unsafe', reason: `p_unsafe ${formatVs(m.pUnsafe, epsilon, 3)} > ε` });
   return failures;
 };
 
@@ -442,11 +455,14 @@ export const DEFAULT_PARAMS: PipelineParams = {
   mitigation: 'project',
 };
 
+/** The number of synthesis passes a depth setting gives: a whole number in 1…MAX_DEPTH. */
+export const clampDepth = (depth: number): number => Math.min(MAX_DEPTH, Math.max(1, Math.round(depth)));
+
 /** Layer indices in execution order: framing and binding once, synthesis `depth` times. */
 export const layerSchedule = (depth: number): { layer: number; pass: number }[] => {
   const schedule: { layer: number; pass: number }[] = [];
   for (let k = 0; k < SYNTHESIS_START; k++) schedule.push({ layer: k, pass: 1 });
-  const passes = Math.min(MAX_DEPTH, Math.max(1, Math.round(depth)));
+  const passes = clampDepth(depth);
   for (let pass = 1; pass <= passes; pass++) {
     for (let k = SYNTHESIS_START; k < LAYERS.length; k++) schedule.push({ layer: k, pass });
   }
@@ -513,33 +529,34 @@ export const runPipeline = (params: PipelineParams): PipelineResult => {
   });
 
   const final = steps[steps.length - 1].metrics;
-  const fmt = (x: number) => x.toFixed(2);
-  // The comparison shown always states the true relation to the threshold.
-  const entropyHigh = final.responseEntropy > THRESHOLDS.maxResponseEntropy;
-  const bindingLow = final.mutualInfo < THRESHOLDS.minMutualInfo;
-  const coherenceLow = final.purity < THRESHOLDS.minPurity;
+  const T = THRESHOLDS;
+  // The comparison shown always states the true relation to the threshold, and
+  // formatVs keeps rounding from contradicting it.
+  const entropyHigh = final.responseEntropy > T.maxResponseEntropy;
+  const bindingLow = final.mutualInfo < T.minMutualInfo;
+  const coherenceLow = final.purity < T.minPurity;
   const signals: ControlSignal[] = [
     {
       id: 'entropy',
-      condition: `H_R = ${fmt(final.responseEntropy)} bits ${entropyHigh ? '>' : '≤'} ${THRESHOLDS.maxResponseEntropy}`,
+      condition: `H_R = ${formatVs(final.responseEntropy, T.maxResponseEntropy)} bits ${entropyHigh ? '>' : '≤'} ${T.maxResponseEntropy}`,
       triggered: entropyHigh,
       action: 'Increase reasoning depth or tighten context relevance',
     },
     {
       id: 'binding',
-      condition: `I(C;R) = ${fmt(final.mutualInfo)} bits ${bindingLow ? '<' : '≥'} ${THRESHOLDS.minMutualInfo}`,
+      condition: `I(C;R) = ${formatVs(final.mutualInfo, T.minMutualInfo)} bits ${bindingLow ? '<' : '≥'} ${T.minMutualInfo}`,
       triggered: bindingLow,
       action: 'Revise retrieval or increase context-binding strength',
     },
     {
       id: 'coherence',
-      condition: `γ = ${fmt(final.purity)} ${coherenceLow ? '<' : '≥'} ${THRESHOLDS.minPurity}`,
+      condition: `γ = ${formatVs(final.purity, T.minPurity, 3)} ${coherenceLow ? '<' : '≥'} ${T.minPurity}`,
       triggered: coherenceLow,
       action: 'Reduce branching or refresh state integrity',
     },
     {
       id: 'unsafe',
-      condition: `p_unsafe = ${governance.pUnsafeBefore.toFixed(3)} ${governance.triggered ? '>' : '≤'} ε = ${params.epsilon.toFixed(3)} (before governance)`,
+      condition: `p_unsafe = ${formatVs(governance.pUnsafeBefore, params.epsilon, 3)} ${governance.triggered ? '>' : '≤'} ε = ${params.epsilon.toFixed(3)} (before governance)`,
       triggered: governance.triggered,
       action:
         params.mitigation === 'project'

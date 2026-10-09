@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PARAMS, LAYERS, MAX_DEPTH, type PipelineParams } from './pipeline';
+import { DEFAULT_PARAMS, LAYERS, MAX_DEPTH, runPipeline, type PipelineParams } from './pipeline';
 import {
   MAX_BUDGET,
   MAX_DRIFT,
@@ -72,8 +72,11 @@ describe('budget', () => {
 
   it('clamps the budget to 1…MAX_BUDGET', () => {
     expect(runFeedbackLoop(DEFAULT_PARAMS, 0).iterations).toHaveLength(1);
-    const allOff = { ...DEFAULT_PARAMS, thetas: LAYERS.map(() => 0) };
-    expect(runFeedbackLoop(allOff, 99).iterations.length).toBeLessThanOrEqual(MAX_BUDGET);
+    // This configuration still has failures and remedies after MAX_BUDGET runs.
+    const long = { ...DEFAULT_PARAMS, thetas: [0.34, 0.22, 0.12, 3, 0.52, 1.29, 0.23, 1.26], depth: 3 };
+    const r = runFeedbackLoop(long, 99);
+    expect(r.iterations).toHaveLength(MAX_BUDGET);
+    expect(r.outcome).toMatchObject({ kind: 'abstain', cause: 'budget', reason: expect.stringMatching(/^Budget of 10 runs spent/) });
   });
 });
 
@@ -86,11 +89,34 @@ describe('stability', () => {
     s.probes.forEach((p) => expect(p.drift).toBeLessThanOrEqual(MAX_DRIFT));
   });
 
-  it('fails for the fragile preset before its remedy', () => {
+  it('fails for the fragile preset before its remedy, and says why without rounding it away', () => {
     const p = SCENARIOS.find((s) => s.id === 'fragile-answer')!.params;
     const first = runFeedbackLoop(p).iterations[0];
     expect(first.failures.map((f) => f.id)).toEqual(['unstable']);
     expect(checkStability(p, first.final).stable).toBe(false);
+    // The drift is 0.104: "drift 0.10" against a limit of 0.1 would read as a pass.
+    expect(first.failures[0].reason).toMatch(/drift 0\.104\)/);
+  });
+
+  it('scales every coupling, including those at or near π', () => {
+    const p: PipelineParams = { ...DEFAULT_PARAMS, thetas: [2.33, 1.53, 3.02, 3, 0.33, 1.67, 3.02, 2.09], dephasing: 0.004 };
+    const reference = runPipeline(p).steps.at(-1)!.metrics;
+    const check = checkStability(p, reference);
+    for (const probe of check.probes) {
+      const scaled = runPipeline({ ...p, thetas: p.thetas.map((t) => t * probe.scale) }).steps.at(-1)!.metrics;
+      const drift = 0.5 * scaled.responseProbs.reduce((s, x, k) => s + Math.abs(x - reference.responseProbs[k]), 0);
+      expect(probe.drift).toBeCloseTo(drift, 12);
+    }
+    // A true ×1.05 drifts 0.111 here; capping θ at π used to hide that.
+    expect(check.stable).toBe(false);
+  });
+
+  it('requires the same answer, not only a small drift', () => {
+    const p = SCENARIOS.find((s) => s.id === 'converges-in-one-pass')!.params;
+    const reference = runPipeline(p).steps.at(-1)!.metrics;
+    const check = checkStability(p, { ...reference, argmax: (reference.argmax + 1) % 4 });
+    check.probes.forEach((probe) => expect(probe.drift).toBeLessThanOrEqual(MAX_DRIFT));
+    expect(check.stable).toBe(false);
   });
 });
 
@@ -152,5 +178,35 @@ describe('loop invariants', () => {
         expect(remedy.apply(config), id).not.toEqual(config);
       }
     }
+  });
+});
+
+describe('remedies', () => {
+  const RETRIEVE = LAYERS.findIndex((l) => l.glyph === '🜄');
+  // 🜄 hands the prompt to the context with strength sin²θ.
+  const transfer = (p: PipelineParams) => Math.sin(p.thetas[RETRIEVE]) ** 2;
+
+  it('revise-retrieval always strengthens the prompt–context update, within the sliders\' range', () => {
+    const remedy = REMEDIES['revise-retrieval'];
+    const grid = [...Array.from({ length: 63 }, (_, i) => i * 0.05), Math.PI];
+    for (const t of grid) {
+      const p = { ...DEFAULT_PARAMS, thetas: DEFAULT_PARAMS.thetas.map((x, i) => (i === RETRIEVE ? t : x)) };
+      if (!remedy.applicable(p)) continue;
+      const next = remedy.apply(p);
+      expect(transfer(next), `θ = ${t.toFixed(2)}`).toBeGreaterThan(transfer(p));
+      expect(next.thetas[RETRIEVE]).toBeGreaterThanOrEqual(0);
+      expect(next.thetas[RETRIEVE]).toBeLessThanOrEqual(Math.PI);
+    }
+    const atPeak = { ...DEFAULT_PARAMS, thetas: DEFAULT_PARAMS.thetas.map((x, i) => (i === RETRIEVE ? Math.PI / 2 : x)) };
+    expect(remedy.applicable(atPeak)).toBe(false);
+  });
+
+  it('step the depth the pipeline actually runs', () => {
+    // Depth 0 runs one pass; it must not be "deepened" to 1, which changes nothing.
+    const low = runFeedbackLoop({ ...DEFAULT_PARAMS, depth: 0 });
+    expect(low.iterations[0].params.depth).toBe(1);
+    expect(trace(low)).toBe(trace(runFeedbackLoop(DEFAULT_PARAMS)));
+    const high = runFeedbackLoop({ ...DEFAULT_PARAMS, depth: 7 });
+    expect(high.iterations[0].params.depth).toBe(MAX_DEPTH);
   });
 });

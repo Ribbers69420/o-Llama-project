@@ -258,10 +258,20 @@ const ComponentNode: React.FC<{
       ${depth > 0 ? 'ml-6 border-l-2 border-slate-700 pl-4' : ''}
     `}>
       <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
         onClick={() => toggleExpansion(component.id)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleExpansion(component.id);
+          }
+        }}
         className={`
           flex items-center p-3 rounded-lg cursor-pointer border
           hover:bg-slate-800/50 transition-colors
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500
           ${isWarning ? 'bg-red-900/10 border-red-500/50 hover:bg-red-900/20' : 'bg-slate-900 border-slate-700'}
         `}
       >
@@ -279,7 +289,7 @@ const ComponentNode: React.FC<{
               {component.name}
             </h3>
             {component.status && (
-              <span className={`w-2 h-2 rounded-full ${statusColors[component.status]} animate-pulse`} />
+              <span className={`w-2 h-2 shrink-0 rounded-full ${statusColors[component.status]} animate-pulse`} />
             )}
           </div>
           <p className="text-xs text-slate-500 line-clamp-1">{component.description}</p>
@@ -362,9 +372,9 @@ const ComponentNode: React.FC<{
           {isWarning && (
             <div className="mt-4 p-3 bg-red-900/20 border border-red-500/30 rounded flex items-start gap-3">
               <AlertTriangle className="text-red-500 shrink-0" size={20} />
-              <div>
+              <div className="min-w-0">
                 <h4 className="text-sm font-bold text-red-400">Integrity Gap Detected</h4>
-                <p className="text-xs text-red-200/70 mt-1">
+                <p className="text-xs text-red-200/70 mt-1 break-words">
                   High capability ML modules detected (Training/Prediction/Optimization) without explicit Ethical Constraint definitions in the input vector. System may exhibit high-entropy behavior in edge cases.
                 </p>
               </div>
