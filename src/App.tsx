@@ -11,9 +11,9 @@ function App() {
 
   return (
     <div className="relative min-h-screen bg-slate-950">
-      {/* A sticky bar on phones so it cannot cover page headers; floating top-right from md up.
+      {/* A full-width sticky bar, so the menu never covers a page header.
           The safe-area inset keeps it below a phone's status bar when the page runs edge to edge. */}
-      <nav className="sticky top-[env(safe-area-inset-top,0px)] md:fixed md:top-3 md:right-3 z-50 flex justify-center md:justify-start gap-1 p-1 bg-slate-900/90 backdrop-blur border-b md:border border-slate-700 md:rounded-lg shadow-xl">
+      <nav className="sticky top-[env(safe-area-inset-top,0px)] z-50 flex flex-wrap justify-center gap-1 px-4 py-1 bg-slate-900/90 backdrop-blur border-b border-slate-700">
         <button
           type="button"
           onClick={() => setView('visualizer')}

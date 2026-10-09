@@ -20,3 +20,7 @@ export const VIZ = {
 
 /** Bundled glyph subsets first (see src/assets/fonts), then the UI sans. */
 export const GLYPH_FONT = "'UQCF Glyphs', ui-sans-serif, system-ui, sans-serif";
+
+/** The same for monospaced text that can contain a glyph, such as "θ(🝞) 0.10 → 0.40". */
+export const GLYPH_MONO_FONT =
+  "'UQCF Glyphs', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";

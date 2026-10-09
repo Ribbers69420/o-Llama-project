@@ -1,4 +1,4 @@
-import React, { useCallback, useDeferredValue, useMemo, useState } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Ban,
@@ -33,7 +33,7 @@ import { SCENARIOS, matchScenario, sameParams } from '../uqcf/scenarios';
 import FeedbackLoopPanel from './FeedbackLoopPanel';
 import { MetricMultiple, ResponseBars } from './PipelineCharts';
 import { Glyph, Panel, Slider, StatusBanner } from './pipelineUi';
-import { VIZ } from './vizTokens';
+import { GLYPH_FONT, VIZ } from './vizTokens';
 
 // --- METRIC DEFINITIONS ---
 
@@ -219,17 +219,34 @@ const DecisionBanner: React.FC<{ result: PipelineResult }> = ({ result }) => {
 
 // --- MAIN ---
 
-/** Selecting this step index always means "the last step". */
-const LAST_STEP = Number.MAX_SAFE_INTEGER;
+/**
+ * A step's identity: its kind, or layer and synthesis pass. The selection is
+ * kept by identity, so changing the depth keeps the same operator selected.
+ */
+const stepKey = (s: PipelineStep): string => (s.kind === 'layer' ? `${s.layer}:${s.pass}` : s.kind);
+
+/** The ethical projector, always the last step. */
+const LAST_STEP_KEY = 'governance';
+
+/** A layer selected in a pass that a lower depth removes moves to the last remaining pass. */
+const keyAtDepth = (key: string, depth: number): string => {
+  const match = /^(\d+):(\d+)$/.exec(key);
+  return match && Number(match[2]) > depth ? `${match[1]}:${depth}` : key;
+};
+
+const PARAMETERS_ID = 'phi-parameters';
 
 const PhiPipelineSimulator: React.FC = () => {
   const [params, setParams] = useState<PipelineParams>(DEFAULT_PARAMS);
-  const [selectedRaw, setSelected] = useState(LAST_STEP);
+  const [selectedKey, setSelectedKey] = useState(LAST_STEP_KEY);
   const [hovered, setHovered] = useState<number | null>(null);
   const [budget, setBudget] = useState(DEFAULT_BUDGET);
+  const [scrollRequest, setScrollRequest] = useState(0);
 
   const result = useMemo(() => runPipeline(params), [params]);
-  const selected = Math.min(selectedRaw, result.steps.length - 1);
+  const found = result.steps.findIndex((s) => stepKey(s) === selectedKey);
+  const selected = found >= 0 ? found : result.steps.length - 1;
+  const select = (i: number) => setSelectedKey(stepKey(result.steps[i]));
   const glyphs = useMemo(() => result.steps.map(stepGlyph), [result]);
   const step = result.steps[selected];
   const m = step.metrics;
@@ -244,9 +261,27 @@ const PhiPipelineSimulator: React.FC = () => {
 
   const loadParams = useCallback((next: PipelineParams) => {
     setParams(next);
-    setSelected(LAST_STEP);
+    setSelectedKey(LAST_STEP_KEY);
     setHovered(null);
   }, []);
+
+  const setDepth = useCallback((depth: number) => {
+    setParams((prev) => ({ ...prev, depth }));
+    setSelectedKey((key) => keyAtDepth(key, depth));
+    // The steps under the pointer may be gone, and removed elements never fire pointerleave.
+    setHovered(null);
+  }, []);
+
+  const loadFinal = () => {
+    loadParams(loop.finalParams);
+    setScrollRequest((n) => n + 1);
+  };
+
+  // Show the loaded configuration. Scrolling after the update has rendered, and
+  // without animation, so the re-render that follows cannot cancel it.
+  useEffect(() => {
+    if (scrollRequest > 0) document.getElementById(PARAMETERS_ID)?.scrollIntoView({ block: 'start' });
+  }, [scrollRequest]);
 
   const setTheta = useCallback((k: number, v: number) => {
     setParams((prev) => ({ ...prev, thetas: prev.thetas.map((t, i) => (i === k ? v : t)) }));
@@ -295,7 +330,7 @@ const PhiPipelineSimulator: React.FC = () => {
                   type="button"
                   aria-pressed={selected === i}
                   aria-label={`Step ${i}: ${stepName(s)}`}
-                  onClick={() => setSelected(i)}
+                  onClick={() => select(i)}
                   onPointerEnter={() => setHovered(i)}
                   onPointerLeave={() => setHovered(null)}
                   className={`w-[5.5rem] h-full px-1 py-2 rounded-lg border text-center transition-colors ${
@@ -326,6 +361,7 @@ const PhiPipelineSimulator: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Panel
+            id={PARAMETERS_ID}
             title="Parameters"
             icon={<SlidersHorizontal size={16} />}
             aside={
@@ -360,7 +396,7 @@ const PhiPipelineSimulator: React.FC = () => {
                     </option>
                   )}
                 </select>
-                <span className="block text-[11px] text-slate-500 mt-1.5">
+                <span className="block text-[11px] text-slate-500 mt-1.5" style={{ fontFamily: GLYPH_FONT }}>
                   {scenario ? scenario.summary : 'Your own settings; pick a scenario to start from a known behaviour.'}
                 </span>
               </label>
@@ -397,7 +433,7 @@ const PhiPipelineSimulator: React.FC = () => {
                 max={MAX_DEPTH}
                 step={1}
                 digits={0}
-                onChange={(v) => setParams((prev) => ({ ...prev, depth: v }))}
+                onChange={setDepth}
               />
               <button
                 type="button"
@@ -509,7 +545,7 @@ const PhiPipelineSimulator: React.FC = () => {
           budget={budget}
           onBudgetChange={setBudget}
           canLoad={!loopStale && !sameParams(loop.finalParams, params)}
-          onLoad={() => loadParams(loop.finalParams)}
+          onLoad={loadFinal}
         />
 
         <Panel
@@ -534,7 +570,7 @@ const PhiPipelineSimulator: React.FC = () => {
                   selected={selected}
                   hovered={hovered}
                   onHover={setHovered}
-                  onSelect={setSelected}
+                  onSelect={select}
                 />
               );
             })}

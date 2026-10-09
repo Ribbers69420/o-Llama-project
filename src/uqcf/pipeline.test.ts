@@ -1,23 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import { adjoint, identity, kron, matmul, maxAbsDiff, outer } from './linalg';
+import { adjoint, identity, kron, matmul, maxAbsDiff, outer, traceProduct } from './linalg';
 import {
   DEFAULT_PARAMS,
   DIM,
   LAYERS,
   MAX_DEPTH,
+  SURPRISE_SMOOTHING,
   SYNTHESIS_START,
+  THRESHOLDS,
   UNSAFE_RESPONSE,
   computeMetrics,
   dephase,
+  failedCriteria,
+  formatVs,
   govern,
   initialState,
   layerSchedule,
   partialTrace,
   runPipeline,
   traceOf,
+  type PipelineParams,
 } from './pipeline';
 
 const ket0 = outer([[1, 0], [0, 0]]);
+
+/** Seeded configurations on the UI's slider grid, so failures are reproducible. */
+const sliderConfigs: PipelineParams[] = (() => {
+  let seed = 2026;
+  const rand = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
+  return Array.from({ length: 300 }, () => ({
+    ...DEFAULT_PARAMS,
+    thetas: LAYERS.map(() => Math.round(rand() * 314) / 100),
+    depth: 1 + Math.floor(rand() * MAX_DEPTH),
+    dephasing: Math.round(rand() * 30) / 1000,
+    epsilon: Math.round(rand() * 20) / 100,
+  }));
+})();
 
 describe('glyph-chain layers', () => {
   it('are unitary for any coupling and the identity at θ = 0', () => {
@@ -159,11 +177,43 @@ describe('runPipeline', () => {
     expect(r.decision).toEqual({ kind: 'collapse', response: 0 });
   });
 
-  it('states the true comparison in every control signal', () => {
-    for (const s of runPipeline(DEFAULT_PARAMS).signals) {
-      const op = s.condition.match(/[<>≤≥]/)?.[0];
-      expect(['<', '>'].includes(op!), s.id).toBe(s.triggered);
+  it('triggers each control signal exactly when its metric crosses the threshold', () => {
+    for (const p of sliderConfigs) {
+      const r = runPipeline(p);
+      const m = r.steps.at(-1)!.metrics;
+      const signal = (id: string) => r.signals.find((s) => s.id === id)!.triggered;
+      expect(signal('entropy')).toBe(m.responseEntropy > THRESHOLDS.maxResponseEntropy);
+      expect(signal('binding')).toBe(m.mutualInfo < THRESHOLDS.minMutualInfo);
+      expect(signal('coherence')).toBe(m.purity < THRESHOLDS.minPurity);
+      expect(signal('unsafe')).toBe(r.governance.pUnsafeBefore > p.epsilon);
     }
+  });
+
+  it('never shows a comparison that its own rounded numbers contradict', () => {
+    // "0.20 bits < 0.2" or "drift 0.10, limit 0.1" would contradict the verdict.
+    const holds = (a: number, op: string, b: number) =>
+      ({ '<': a < b, '>': a > b, '≤': a <= b, '≥': a >= b })[op as '<' | '>' | '≤' | '≥'];
+    const comparisons = /(-?\d+\.?\d*)(?: bits)? ([<>≤≥]) (?:ε = )?(-?\d+\.?\d*)/g;
+    let checked = 0;
+    for (const p of sliderConfigs) {
+      const r = runPipeline(p);
+      const texts = [...r.signals.map((s) => s.condition), ...failedCriteria(r.steps.at(-1)!.metrics, p.epsilon).map((f) => f.reason)];
+      for (const text of texts) {
+        for (const [, a, op, b] of text.matchAll(comparisons)) {
+          expect(holds(Number(a), op, Number(b)), text).toBe(true);
+          checked++;
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(1000);
+  });
+
+  it('shows enough digits near a threshold', () => {
+    // Defaults with θ(🜂) = 2.88 put I(C;R) just under 0.2.
+    const r = runPipeline({ ...DEFAULT_PARAMS, thetas: DEFAULT_PARAMS.thetas.map((t, i) => (i === 0 ? 2.88 : t)) });
+    const binding = r.signals.find((s) => s.id === 'binding')!;
+    expect(binding.triggered).toBe(true);
+    expect(binding.condition).not.toMatch(/0\.20 bits </);
   });
 
   it('refuses with the fail-closed policy when p_unsafe exceeds ε', () => {
@@ -174,5 +224,58 @@ describe('runPipeline', () => {
   it('asks for another iteration when the answer is not concentrated', () => {
     const r = runPipeline({ ...DEFAULT_PARAMS, thetas: LAYERS.map(() => 0), epsilon: 0.3 });
     expect(r.decision).toMatchObject({ kind: 'continue' });
+  });
+});
+
+describe('formatVs', () => {
+  it('adds digits only when rounding would land on the wrong side of the threshold', () => {
+    expect(formatVs(0.5, 0.2)).toBe('0.50');
+    expect(formatVs(0.104, 0.1)).toBe('0.104');
+    expect(formatVs(0.1996, 0.2)).toBe('0.1996');
+    expect(formatVs(0.7996, 0.8, 3)).toBe('0.7996');
+    expect(formatVs(0.2, 0.2)).toBe('0.20');
+  });
+});
+
+describe('metric definitions (§5)', () => {
+  const noisy = runPipeline({ ...DEFAULT_PARAMS, depth: 2 });
+  const ideal = runPipeline({ ...DEFAULT_PARAMS, depth: 2, dephasing: 0 });
+
+  it('J = H_R − I(C;R) − γ + p_unsafe at every step', () => {
+    for (const { metrics: m } of noisy.steps) {
+      expect(m.control).toBeCloseTo(m.responseEntropy - m.mutualInfo - m.purity + m.pUnsafe, 12);
+    }
+  });
+
+  it('F = Tr(ρ_ideal ρ) against the same run without dephasing', () => {
+    noisy.steps.forEach((step, i) => {
+      expect(step.metrics.fidelity).toBeCloseTo(traceProduct(ideal.steps[i].rho, step.rho), 12);
+    });
+    // Without noise the run is its own ideal: F = γ = 1 throughout.
+    ideal.steps.forEach((step) => expect(step.metrics.fidelity).toBeCloseTo(1, 10));
+  });
+
+  it('D_KL(p_current ‖ p_previous) with a smoothed baseline, 0 for the initial state', () => {
+    expect(noisy.steps[0].metrics.surprise).toBe(0);
+    const d = SURPRISE_SMOOTHING;
+    const kl = (p: number[], q: number[]) =>
+      p.reduce((s, pi, k) => (pi < 1e-15 ? s : s + pi * Math.log2(pi / ((q[k] + d) / (1 + d * q.length)))), 0);
+    for (let i = 1; i < noisy.steps.length; i++) {
+      const p = noisy.steps[i].metrics.responseProbs;
+      const q = noisy.steps[i - 1].metrics.responseProbs;
+      expect(noisy.steps[i].metrics.surprise).toBeCloseTo(kl(p, q), 10);
+    }
+    // The direction matters: some steps give a different D_KL the other way round.
+    const asymmetric = noisy.steps.slice(1).some((s, i) => {
+      const p = s.metrics.responseProbs;
+      const q = noisy.steps[i].metrics.responseProbs;
+      return Math.abs(kl(p, q) - kl(q, p)) > 1e-3;
+    });
+    expect(asymmetric).toBe(true);
+  });
+
+  it('D_KL of a certain answer against a uniform baseline is 2 bits', () => {
+    const certain = kron(kron(ket0, ket0), outer([[1, 0], [0, 0], [0, 0], [0, 0]]));
+    expect(computeMetrics(certain, certain, [0.25, 0.25, 0.25, 0.25]).surprise).toBeCloseTo(2, 4);
   });
 });
