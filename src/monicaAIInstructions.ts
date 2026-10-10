@@ -68,7 +68,7 @@ export const monicaAIInstructions = {
     inclusivity: ["Support for diverse user needs", "Accessibility-compliant design"],
   },
   finalNote:
-    "This artifact compresses Monica's system instructions, highlighting artifact creation, ethical compliance, advanced features, and flexible AI model integrations.",
+    "This JSON artifact compresses Monica’s system instructions, highlighting artifact creation, ethical compliance, advanced features, and flexible AI model integrations.",
 } as const;
 
 // MonicaAISystem - Extended System Configuration
@@ -76,7 +76,7 @@ export const monicaAIInstructions = {
 export const MonicaAISystem = {
   version: "2.0.0",
   description:
-    "Comprehensive implementation of TacoFramework and Monica AI core functionality with extended features, detailed integration and advanced subsystems",
+    "Omfattende implementering af TacoFramework og Monica AI's kernefunktionalitet med udvidede features, detaljeret integration og avancerede subsystemer",
   metadata: {
     lastUpdated: "2025-01-16T08:39:00Z",
     status: "production",
