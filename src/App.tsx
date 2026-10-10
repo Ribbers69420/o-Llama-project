@@ -49,9 +49,11 @@ function App() {
         </button>
       </nav>
 
-      {view === 'visualizer' && <EnterpriseQuantumVisualizer />}
-      {view === 'unified' && <UnifiedSystemComponent />}
-      {view === 'pipeline' && <PhiPipelineSimulator />}
+      <main>
+        {view === 'visualizer' && <EnterpriseQuantumVisualizer />}
+        {view === 'unified' && <UnifiedSystemComponent />}
+        {view === 'pipeline' && <PhiPipelineSimulator />}
+      </main>
     </div>
   );
 }

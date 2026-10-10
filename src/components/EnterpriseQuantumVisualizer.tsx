@@ -289,7 +289,11 @@ const ComponentNode: React.FC<{
               {component.name}
             </h3>
             {component.status && (
-              <span className={`w-2 h-2 shrink-0 rounded-full ${statusColors[component.status]} animate-pulse`} />
+              <span
+                role="img"
+                aria-label={`Status: ${component.status}`}
+                className={`w-2 h-2 shrink-0 rounded-full ${statusColors[component.status]} animate-pulse`}
+              />
             )}
           </div>
           <p className="text-xs text-slate-500 line-clamp-1">{component.description}</p>
@@ -302,7 +306,7 @@ const ComponentNode: React.FC<{
               {component.architecturalComplexity.toFixed(2)}
             </span>
           </div>
-          <div className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
+          <div aria-hidden="true" className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
             &rarr;
           </div>
         </div>
@@ -464,7 +468,7 @@ const EnterpriseQuantumVisualizer: React.FC = () => {
         <div className="mb-8 p-4 bg-gradient-to-r from-indigo-900/20 to-violet-900/20 border border-indigo-500/20 rounded-lg flex items-start gap-4">
           <GitBranch className="text-indigo-400 shrink-0 mt-1" size={20} />
           <div>
-            <h3 className="text-sm font-bold text-indigo-300 mb-1">Architectural Alignment</h3>
+            <h2 className="text-sm font-bold text-indigo-300 mb-1">Architectural Alignment</h2>
             <p className="text-xs text-indigo-200/70 italic">
               "The asymptote is the only honest geometry. We optimize for truth, not just satisfaction."
             </p>
@@ -479,6 +483,7 @@ const EnterpriseQuantumVisualizer: React.FC = () => {
             </h2>
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={() => setFrameworkState(prev => ({ ...prev, expandedComponents: [] }))}
                 className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 transition-colors"
               >
