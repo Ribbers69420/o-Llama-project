@@ -1,0 +1,20 @@
+{
+  "name": "baseline_dummy",
+  "dataset_tsv": "../data/sample.tsv",
+  "out_dir": "../runs/baseline_dummy",
+  "adapter": {
+    "type": "dummy",
+    "params": { "corruption": 0.08, "seed": 0 }
+  },
+  "normalization": {
+    "keep_case": true,
+    "normalize_ws": true,
+    "unicode_form": "NFC"
+  },
+  "bootstrap": {
+    "iterations": 1000,
+    "confidence": 0.95,
+    "seed": 42
+  },
+  "max_samples": 0
+}

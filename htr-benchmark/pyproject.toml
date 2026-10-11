@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "htr-benchmark"
+version = "0.2.0"
+description = "Modular, reproducible benchmark harness for historical HTR/OCR with hallucination-aware metrics."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+gemini = ["google-generativeai>=0.7", "Pillow>=10.0"]
+trocr = ["transformers>=4.40", "torch>=2.1", "Pillow>=10.0"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+htr-benchmark = "htr_benchmark.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["htr_benchmark*"]

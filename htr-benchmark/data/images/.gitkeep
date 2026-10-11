@@ -1,0 +1,2 @@
+# Place manuscript images referenced by the TSV manifests here.
+# The dummy adapter does not read images, so the sample run works without them.

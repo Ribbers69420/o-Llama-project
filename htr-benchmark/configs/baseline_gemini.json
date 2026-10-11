@@ -1,0 +1,25 @@
+{
+  "name": "baseline_gemini",
+  "dataset_tsv": "../data/sample.tsv",
+  "out_dir": "../runs/baseline_gemini",
+  "adapter": {
+    "type": "gemini",
+    "params": {
+      "model_name": "gemini-1.5-flash",
+      "temperature": 0.1,
+      "top_p": 0.95,
+      "api_key_env": "GEMINI_API_KEY"
+    }
+  },
+  "normalization": {
+    "keep_case": true,
+    "normalize_ws": true,
+    "unicode_form": "NFC"
+  },
+  "bootstrap": {
+    "iterations": 1000,
+    "confidence": 0.95,
+    "seed": 42
+  },
+  "max_samples": 0
+}
