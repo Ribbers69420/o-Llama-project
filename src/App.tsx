@@ -2,9 +2,10 @@ import { useState } from 'react';
 import EnterpriseQuantumVisualizer from './components/EnterpriseQuantumVisualizer';
 import UnifiedSystemComponent from './components/UnifiedSystemComponent';
 import PhiPipelineSimulator from './components/PhiPipelineSimulator';
+import VidEoMTVisualizer from './components/VidEoMTVisualizer';
 import './index.css';
 
-type View = 'visualizer' | 'unified' | 'pipeline';
+type View = 'visualizer' | 'unified' | 'pipeline' | 'videomt';
 
 function App() {
   const [view, setView] = useState<View>('visualizer');
@@ -47,11 +48,23 @@ function App() {
         >
           Φ PIPELINE
         </button>
+        <button
+          type="button"
+          onClick={() => setView('videomt')}
+          className={`px-3 py-1.5 text-[11px] font-mono rounded transition-colors ${
+            view === 'videomt'
+              ? 'bg-cyan-600 text-white'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+          }`}
+        >
+          VIDEOMT EXPLORER
+        </button>
       </nav>
 
       {view === 'visualizer' && <EnterpriseQuantumVisualizer />}
       {view === 'unified' && <UnifiedSystemComponent />}
       {view === 'pipeline' && <PhiPipelineSimulator />}
+      {view === 'videomt' && <VidEoMTVisualizer />}
     </div>
   );
 }
