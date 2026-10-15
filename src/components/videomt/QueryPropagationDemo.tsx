@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useReducer, useRef } from 'react';
 import { Play, Pause, SkipForward, SkipBack, RotateCcw } from 'lucide-react';
 import { DEMO_FRAMES, DEMO_SLOTS } from './data';
+import { demoReducer, initialDemoState, LAST } from './demoMachine';
+import { inkFor } from './vizMath';
 import type { AnimationPhase, FrameState, ObjectQuery } from './types';
 import { VIZ } from '../vizTokens';
 
-const LAST = DEMO_FRAMES.length - 1;
 const PHASE_MS = 400; // time each phase of a step is shown
 const DWELL_MS = 1600; // autoplay pause on a finished frame
 
@@ -17,20 +18,6 @@ const PHASE_TEXT: Record<AnimationPhase, string> = {
 };
 
 const LEARNED = VIZ.reference; // a learned query: no object bound to it
-const INK_LIGHT = '#ffffff';
-const INK_DARK = '#020617';
-
-// Pick white or dark ink by the fill's luminance so a tile label always clears contrast.
-function luminance(hex: string): number {
-  const [r, g, b] = [1, 3, 5]
-    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
-    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-const inkFor = (bg: string) =>
-  contrast(luminance(bg), luminance(INK_LIGHT)) >= contrast(luminance(bg), luminance(INK_DARK)) ? INK_LIGHT : INK_DARK;
-
 /** The object (if any) that each query slot follows in a frame. */
 const bindings = (frame: FrameState): (ObjectQuery | null)[] =>
   Array.from({ length: DEMO_SLOTS }, (_, k) => frame.objects.find((o) => o.slot === k) ?? null);
@@ -115,33 +102,23 @@ const btn =
   'outline-none focus-visible:ring-2 focus-visible:ring-slate-300';
 
 const QueryPropagationDemo: React.FC = () => {
-  const [currentFrame, setCurrentFrame] = useState(0);
-  const [phase, setPhase] = useState<AnimationPhase>('complete');
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [state, dispatch] = useReducer(demoReducer, initialDemoState);
+  const { frame: currentFrame, phase, playing } = state;
   const stripRef = useRef<HTMLDivElement>(null);
 
-  // One step runs as a chain of timers, one phase at a time. Because the effect depends on
-  // the phase, its cleanup cancels the pending timer on Reset and on unmount, and only one
-  // step can ever be in flight, so currentFrame can never run past the last frame.
+  // The reducer owns what a step is (see demoMachine.ts); the effects only supply the clock.
+  // Each phase lasts PHASE_MS. The effect depends on the phase, so its cleanup cancels the
+  // pending timer on Reset and on unmount.
   useEffect(() => {
     if (phase === 'complete') return;
-    const id = setTimeout(() => {
-      if (phase === 'propagating') setPhase('transforming');
-      else if (phase === 'transforming') setPhase('fusing');
-      else {
-        setCurrentFrame((f) => Math.min(f + 1, LAST));
-        setPhase('complete');
-      }
-    }, PHASE_MS);
+    const id = setTimeout(() => dispatch({ type: 'tick' }), PHASE_MS);
     return () => clearTimeout(id);
   }, [phase]);
 
-  // Autoplay: after a dwell on a finished frame, start the next step. Reaching the last frame
-  // ends playback because `playing` is derived from the frame.
-  const playing = isPlaying && currentFrame < LAST;
+  // Autoplay: after a dwell on a finished frame, start the next step.
   useEffect(() => {
     if (!playing || phase !== 'complete') return;
-    const id = setTimeout(() => setPhase('propagating'), DWELL_MS);
+    const id = setTimeout(() => dispatch({ type: 'step' }), DWELL_MS);
     return () => clearTimeout(id);
   }, [playing, phase]);
 
@@ -160,33 +137,11 @@ const QueryPropagationDemo: React.FC = () => {
     strip.scrollTo({ left: tile.offsetLeft - (strip.clientWidth - tile.offsetWidth) / 2 });
   }, [shownFrame]);
 
-  const stepForward = () => {
-    if (currentFrame < LAST && phase === 'complete') setPhase('propagating');
-  };
-  const stepBack = () => {
-    if (currentFrame > 0 && phase === 'complete') {
-      setIsPlaying(false);
-      setCurrentFrame((f) => f - 1);
-    }
-  };
-  const reset = () => {
-    setIsPlaying(false);
-    setCurrentFrame(0);
-    setPhase('complete');
-  };
-  const togglePlay = () => {
-    if (currentFrame === LAST) {
-      setCurrentFrame(0); // replay from the start
-      setIsPlaying(true);
-    } else {
-      setIsPlaying(!playing);
-    }
-  };
-  const goTo = (i: number) => {
-    if (phase !== 'complete') return;
-    setIsPlaying(false);
-    setCurrentFrame(i);
-  };
+  const stepForward = () => dispatch({ type: 'step' });
+  const stepBack = () => dispatch({ type: 'back' });
+  const reset = () => dispatch({ type: 'reset' });
+  const togglePlay = () => dispatch({ type: 'togglePlay' });
+  const goTo = (i: number) => dispatch({ type: 'goto', frame: i });
 
   const prevSlots = prevFrame ? bindings(prevFrame) : null;
   const slots = bindings(frame);

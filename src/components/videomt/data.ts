@@ -1,5 +1,7 @@
 import type {
   AblationRow,
+  Analysis,
+  AnalysisRow,
   Backbone,
   BenchmarkResult,
   DatasetKey,
@@ -241,6 +243,127 @@ export const BENCHMARK_RESULTS: BenchmarkResult[] = [
   result('vspw', 'DVIS++', 'ViT-L', 62.8, 2290, 13, { name: 'mVC16', value: 94.2 }),
   result('vspw', 'VidEoMT', 'ViT-L', 64.9, 1909, 73, { name: 'mVC16', value: 95.0 }),
 ];
+
+// The paper's analysis tables (§5.3 and Appendix B). Table numbers are the paper's own.
+// Tables 8 and 9 print the AP change of VidEoMT against CAVIS next to each VidEoMT row; it is
+// kept as `printedDelta` so data.test.ts can check it against the AP values.
+const row = (
+  id: string,
+  label: string,
+  ap: number,
+  gflops: number,
+  fps: number,
+  extra: Partial<AnalysisRow> = {},
+): AnalysisRow => ({ id, label, ap, gflops, fps, isVidEoMT: false, ...extra });
+
+const pretrainingPair = (
+  group: string,
+  cavis: [number, number, number],
+  vid: [number, number, number],
+  printedDelta: number,
+): AnalysisRow[] => [
+  row(`pretraining:${group}:CAVIS`, 'CAVIS', cavis[0], cavis[1], cavis[2], { group, isReference: true }),
+  row(`pretraining:${group}:VidEoMT`, 'VidEoMT', vid[0], vid[1], vid[2], { group, isVidEoMT: true, printedDelta }),
+];
+
+const sizeTriple = (
+  group: string,
+  cavis: [number, string, number, number],
+  eomtCavis: [number, string, number, number],
+  vid: [number, string, number, number],
+  printedDelta: number,
+): AnalysisRow[] => [
+  row(`size:${group}:CAVIS`, 'CAVIS', cavis[0], cavis[2], cavis[3], { group, params: cavis[1], isReference: true }),
+  row(`size:${group}:EoMT+CAVIS`, 'EoMT + CAVIS', eomtCavis[0], eomtCavis[2], eomtCavis[3], { group, params: eomtCavis[1] }),
+  row(`size:${group}:VidEoMT`, 'VidEoMT', vid[0], vid[2], vid[3], { group, params: vid[1], isVidEoMT: true, printedDelta }),
+];
+
+// Order inside the tuples: [AP, (params,) GFLOPs, FPS].
+export const ANALYSES: Analysis[] = [
+  {
+    key: 'pretraining',
+    title: 'Pre-training',
+    question: 'Does VidEoMT need large-scale pre-training?',
+    source: 'Paper Table 8 (§5.3)',
+    setup: 'YouTube-VIS 2019 val, ViT-L. The ± figure is VidEoMT’s AP minus CAVIS’s AP with the same pre-training.',
+    takeaway:
+      'With strong pre-training (DINOv3, DINOv2, EVA-02) VidEoMT is within 0.3 AP of CAVIS or ahead of it. The gap in CAVIS’s favour grows to 1.4 AP with ImageNet-21K and 2.7 AP with ImageNet-1K. The paper reads this as support for its hypothesis that large-scale pre-training is what lets a plain ViT take over the tracking modules.',
+    note: 'DINOv3 and EVA-02 run slower than DINOv2 at about the same GFLOPs. The paper attributes a significant part of that to rotary position embeddings (App. B.3).',
+    rows: [
+      ...pretrainingPair('DINOv3', [68.8, 838, 13], [68.9, 566, 123], 0.1),
+      ...pretrainingPair('DINOv2', [68.9, 838, 15], [68.6, 566, 160], -0.3),
+      ...pretrainingPair('EVA-02', [68.0, 835, 12], [67.8, 564, 110], -0.2),
+      ...pretrainingPair('IN21K', [62.2, 838, 15], [60.8, 566, 160], -1.4),
+      ...pretrainingPair('IN1K', [59.4, 838, 15], [56.7, 566, 160], -2.7),
+    ],
+  },
+  {
+    key: 'size',
+    title: 'Model size',
+    question: 'How does the size of the ViT change the picture?',
+    source: 'Paper Tables 9 and B (§5.3, App. B.2)',
+    setup: 'YouTube-VIS 2019 val, DINOv2. The ± figure is VidEoMT’s AP minus CAVIS’s AP at the same size.',
+    takeaway:
+      'The gap to CAVIS shrinks as the ViT grows: 2.7 AP at ViT-S, 1.3 at ViT-B, 0.3 at ViT-L. VidEoMT with ViT-L (68.6 AP, 160 FPS) is still far more accurate than CAVIS with ViT-S (55.5 AP, 19 FPS) and several times faster. At every size VidEoMT beats EoMT + CAVIS in both AP and FPS.',
+    rows: [
+      ...sizeTriple('ViT-L', [68.9, '358M', 838, 15], [68.1, '328M', 699, 42], [68.6, '318M', 566, 160], -0.3),
+      ...sizeTriple('ViT-B', [59.5, '131M', 390, 18], [57.4, '103M', 284, 67], [58.2, '95M', 182, 251], -1.3),
+      ...sizeTriple('ViT-S', [55.5, '57M', 251, 19], [50.3, '34M', 150, 93], [52.8, '25M', 56, 294], -2.7),
+    ],
+  },
+  {
+    key: 'propagation',
+    title: 'Propagation strategy',
+    question: 'How should the queries be carried to the next frame?',
+    source: 'Paper Table A (App. B.1)',
+    setup: 'YouTube-VIS 2019 val, ViT-L, DINOv2.',
+    takeaway:
+      'With no propagation the model gets 61.3 AP. Feeding the previous queries back alone gives 63.9 AP but struggles to find new objects. Resetting queries that found no object gets 67.8, and a TrackFormer-style scheme 67.7, but that one drops to 117 FPS because duplicate detections must be filtered before they are propagated. Query fusion gets 68.6 AP at 160 FPS.',
+    rows: [
+      row('propagation:none', 'No propagation', 61.3, 565, 162),
+      row('propagation:only', 'Propagation only', 63.9, 565, 162),
+      row('propagation:reset', 'Non-object reset', 67.8, 565, 157),
+      row('propagation:trackformer', 'TrackFormer', 67.7, 571, 117),
+      row('propagation:fusion', 'Query fusion = VidEoMT', 68.6, 566, 160, { isVidEoMT: true }),
+    ],
+  },
+  {
+    key: 'trackers',
+    title: 'EoMT plus a tracker',
+    question: 'Why not bolt an existing tracker onto EoMT?',
+    source: 'Paper Table 6 (§5.3)',
+    setup: 'YouTube-VIS 2019 val, ViT-L, DINOv2.',
+    takeaway:
+      'Existing trackers do work on top of EoMT; the best, CAVIS, reaches 68.1 AP. VidEoMT is slightly more accurate than that combination and nearly 4× faster, with no tracker at all.',
+    rows: [
+      row('trackers:cavis', 'EoMT + CAVIS', 68.1, 699, 42),
+      row('trackers:dvispp', 'EoMT + DVIS++', 67.0, 683, 69),
+      row('trackers:daq', 'EoMT + DVIS-DAQ', 67.3, 703, 28),
+      row('trackers:videomt', 'VidEoMT (no tracker)', 68.6, 566, 160, { isVidEoMT: true }),
+    ],
+  },
+  {
+    key: 'decoder',
+    title: 'Decoder or encoder-only',
+    question: 'Would the same trick work in a decoder instead?',
+    source: 'Paper Table 7 (§5.3)',
+    setup: 'YouTube-VIS 2019 val, ViT-L, DINOv2.',
+    takeaway:
+      'Propagating queries into a ViT-Adapter + Mask2Former decoder instead of the encoder gives comparable AP (68.0 with query fusion, 67.8 with TrackFormer’s scheme) but runs at 32 and 22 FPS. The encoder-only VidEoMT reaches 68.6 AP at 160 FPS. In the decoder, query fusion is slightly more accurate and faster than TrackFormer’s scheme.',
+    rows: [
+      row('decoder:trackformer', 'Decoder + TrackFormer', 67.8, 739, 22, { detail: 'ViT-Adapter encoder, Mask2Former decoder, TrackFormer-style propagation' }),
+      row('decoder:fusion', 'Decoder + query fusion', 68.0, 718, 32, { detail: 'ViT-Adapter encoder, Mask2Former decoder, query fusion' }),
+      row('decoder:videomt', 'VidEoMT, query fusion', 68.6, 566, 160, { isVidEoMT: true, detail: 'Encoder only: no adapter, no decoder' }),
+    ],
+  },
+];
+
+/** VidEoMT's AP minus the reference row of the same group, to the paper's one decimal. */
+export function gapToReference(rows: AnalysisRow[], r: AnalysisRow): number | null {
+  const ref = rows.find((x) => x.group === r.group && x.isReference);
+  if (!ref || r.isReference) return null;
+  return Math.round((r.ap - ref.ap) * 10) / 10;
+}
 
 /** Query slots drawn in the demo. The paper uses N = 200 learnable queries. */
 export const DEMO_SLOTS = 8;

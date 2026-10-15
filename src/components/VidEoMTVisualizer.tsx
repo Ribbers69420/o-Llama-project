@@ -1,9 +1,10 @@
 import React from 'react';
-import { Zap, Layers, Play, BarChart3 } from 'lucide-react';
+import { Zap, Layers, Play, BarChart3, FlaskConical } from 'lucide-react';
 import SimplificationTable from './videomt/SimplificationTable';
 import ArchitectureDiagram from './videomt/ArchitectureDiagram';
 import QueryPropagationDemo from './videomt/QueryPropagationDemo';
 import PerformanceChart from './videomt/PerformanceChart';
+import Analyses from './videomt/Analyses';
 import { ABLATION_TABLE } from './videomt/data';
 
 const CAVIS_ROW = ABLATION_TABLE[0];
@@ -114,6 +115,15 @@ const VidEoMTVisualizer: React.FC = () => {
           subtitle="Accuracy vs speed on 6 video segmentation benchmarks (paper Tables 2–5)"
         >
           <PerformanceChart />
+        </Section>
+
+        {/* Section 5: Further analyses */}
+        <Section
+          icon={<FlaskConical className="w-4 h-4" />}
+          title="Further Analyses"
+          subtitle="The paper's own ablations on pre-training, model size, propagation strategy and where the temporal trick lives (§5.3 and Appendix B)"
+        >
+          <Analyses />
         </Section>
 
         {/* Footer */}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BENCHMARK_RESULTS, DATASET_LABELS, DATASET_NOTES, DATASET_TASK } from './data';
 import type { BenchmarkResult, DatasetKey } from './types';
 import { VIZ } from '../vizTokens';
+import { scatterScales } from './vizMath';
 
 const DATASETS = Object.keys(DATASET_LABELS) as DatasetKey[];
 
@@ -21,20 +22,6 @@ const fmt = (n: number) => n.toFixed(1);
 
 const rowName = (r: BenchmarkResult) => `${r.method} (${r.backbone})`;
 
-const FPS_TICKS = [2, 5, 10, 20, 50, 100, 200];
-
-/** Clean tick values covering [lo, hi]. */
-function niceTicks(lo: number, hi: number): number[] {
-  const span = hi - lo;
-  const raw = span / 4;
-  const mag = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? 10 * mag;
-  const first = Math.floor(lo / step) * step;
-  const ticks: number[] = [];
-  for (let v = first; v < hi + step; v += step) ticks.push(Math.round(v * 100) / 100);
-  return ticks.filter((_, i) => i === 0 || ticks[i - 1] < hi);
-}
-
 interface ChartProps {
   rows: BenchmarkResult[];
   activeId: string | null;
@@ -42,18 +29,7 @@ interface ChartProps {
 }
 
 const ScatterPlot: React.FC<ChartProps> = ({ rows, activeId, onActivate }) => {
-  const fpsValues = rows.map((r) => r.fps);
-  const xLo = [...FPS_TICKS].reverse().find((t) => t <= Math.min(...fpsValues) * 0.85) ?? FPS_TICKS[0];
-  const xHi = FPS_TICKS.find((t) => t >= Math.max(...fpsValues) * 1.15) ?? FPS_TICKS[FPS_TICKS.length - 1];
-  const xTicks = FPS_TICKS.filter((t) => t >= xLo && t <= xHi);
-  const toX = (fps: number) => ((Math.log10(fps) - Math.log10(xLo)) / (Math.log10(xHi) - Math.log10(xLo))) * 100;
-
-  const mVals = rows.map((r) => r.metric);
-  const pad = Math.max((Math.max(...mVals) - Math.min(...mVals)) * 0.12, 0.5);
-  const yTicks = niceTicks(Math.min(...mVals) - pad, Math.max(...mVals) + pad);
-  const yLo = yTicks[0];
-  const yHi = yTicks[yTicks.length - 1];
-  const toY = (m: number) => 100 - ((m - yLo) / (yHi - yLo)) * 100;
+  const { xTicks, yTicks, toX, toY } = scatterScales(rows);
 
   const name = metricLabel(rows[0]);
 
@@ -157,18 +133,19 @@ const BarList: React.FC<ChartProps> = ({ rows, activeId, onActivate }) => {
               onFocus={() => onActivate(r.id)}
               onClick={() => onActivate(r.id)}
               aria-pressed={active}
-              className={`grid w-full grid-cols-[6.5rem_1fr_3.25rem] items-center gap-2 rounded px-1 py-0.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-slate-300 sm:grid-cols-[9rem_1fr_3.75rem] ${
+              className={`grid w-full grid-cols-[1fr_auto] items-center gap-x-2 gap-y-1 rounded px-1 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-slate-300 sm:grid-cols-[9rem_1fr_3.75rem] sm:py-0.5 ${
                 active ? 'bg-slate-800/60' : ''
               }`}
             >
-              <span className="min-w-0 truncate text-xs" style={{ color: r.isVidEoMT ? VIZ.textPrimary : VIZ.textSecondary }}>
+              <span className="col-start-1 row-start-1 min-w-0 truncate text-xs" style={{ color: r.isVidEoMT ? VIZ.textPrimary : VIZ.textSecondary }}>
                 <span className={r.isVidEoMT ? 'font-semibold' : ''}>{r.method}</span>
                 <span className="ml-1 text-[10px]" style={{ color: VIZ.textSecondary }}>
                   {r.backbone}
                 </span>
               </span>
-              {/* Bars start at zero and are capped so the value fits outside the tip. */}
-              <span className="relative block h-4">
+              {/* Bars start at zero and are capped so the value fits outside the tip. On phones the bar gets
+                  its own line under the label, so it has the full width. */}
+              <span className="relative col-span-2 row-start-2 block h-4 sm:col-span-1 sm:col-start-2 sm:row-start-1">
                 <span
                   className="absolute left-0 top-0 block h-4 rounded-r"
                   style={{ width: `calc((100% - 2.5rem) * ${ratio})`, background: markColor(r, active) }}
@@ -180,7 +157,7 @@ const BarList: React.FC<ChartProps> = ({ rows, activeId, onActivate }) => {
                   {fmt(r.metric)}
                 </span>
               </span>
-              <span className="text-right text-[11px] font-mono tabular-nums" style={{ color: r.isVidEoMT ? VIZ.textPrimary : VIZ.textSecondary }}>
+              <span className="col-start-2 row-start-1 text-right text-[11px] font-mono tabular-nums sm:col-start-3" style={{ color: r.isVidEoMT ? VIZ.textPrimary : VIZ.textSecondary }}>
                 {r.fps} FPS
               </span>
             </button>

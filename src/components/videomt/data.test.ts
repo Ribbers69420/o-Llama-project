@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { ABLATION_TABLE, BENCHMARK_RESULTS, DATASET_LABELS, DATASET_METRIC, DEMO_FRAMES, DEMO_SLOTS } from './data';
-import type { BenchmarkResult, DatasetKey } from './types';
+import {
+  ABLATION_TABLE,
+  ANALYSES,
+  BENCHMARK_RESULTS,
+  DATASET_LABELS,
+  DATASET_METRIC,
+  DEMO_FRAMES,
+  DEMO_SLOTS,
+  gapToReference,
+} from './data';
+import type { AnalysisKey, BenchmarkResult, DatasetKey } from './types';
 
 const DATASETS = Object.keys(DATASET_LABELS) as DatasetKey[];
 
@@ -168,5 +177,143 @@ describe('demo frames (schematic, not paper data)', () => {
         expect(DEMO_FRAMES[i - 1].objects.some((p) => p.slot === o.slot)).toBe(false);
       }
     });
+  });
+});
+
+describe('analysis tables (§5.3 and Appendix B)', () => {
+  const analysis = (key: AnalysisKey) => ANALYSES.find((a) => a.key === key)!;
+  const rowOf = (key: AnalysisKey, id: string) => {
+    const r = analysis(key).rows.find((x) => x.id === id);
+    if (!r) throw new Error(`no row ${id} in ${key}`);
+    return r;
+  };
+  const gaps = (key: AnalysisKey) =>
+    Object.fromEntries(
+      analysis(key)
+        .rows.filter((r) => r.isVidEoMT)
+        .map((r) => [r.group, gapToReference(analysis(key).rows, r)]),
+    );
+
+  it('has unique row ids and one analysis per key', () => {
+    const ids = ANALYSES.flatMap((a) => a.rows.map((r) => r.id));
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(ANALYSES.map((a) => a.key)).size).toBe(ANALYSES.length);
+  });
+
+  it('has exactly one VidEoMT row per group, and one CAVIS reference where the paper compares against it', () => {
+    for (const key of ['pretraining', 'size'] as const) {
+      const groups = new Set(analysis(key).rows.map((r) => r.group));
+      for (const g of groups) {
+        const rows = analysis(key).rows.filter((r) => r.group === g);
+        expect(rows.filter((r) => r.isVidEoMT)).toHaveLength(1);
+        expect(rows.filter((r) => r.isReference)).toHaveLength(1);
+      }
+    }
+    for (const key of ['propagation', 'trackers', 'decoder'] as const) {
+      expect(analysis(key).rows.filter((r) => r.isVidEoMT)).toHaveLength(1);
+    }
+  });
+
+  it('transcribed each AP correctly: the change the paper prints equals VidEoMT minus CAVIS', () => {
+    for (const key of ['pretraining', 'size'] as const) {
+      for (const r of analysis(key).rows.filter((x) => x.isVidEoMT)) {
+        expect(r.printedDelta).toBeDefined();
+        expect(gapToReference(analysis(key).rows, r)).toBeCloseTo(r.printedDelta!, 5);
+      }
+    }
+  });
+
+  it('pre-training: comparable to CAVIS with large-scale pre-training, a growing gap with less', () => {
+    const g = gaps('pretraining');
+    for (const large of ['DINOv3', 'DINOv2', 'EVA-02']) expect(Math.abs(g[large]!)).toBeLessThanOrEqual(0.3);
+    expect(Math.abs(g['IN21K']!)).toBeGreaterThan(Math.abs(g['DINOv2']!));
+    expect(Math.abs(g['IN1K']!)).toBeGreaterThan(Math.abs(g['IN21K']!));
+    expect(g['IN21K']).toBeLessThan(0);
+    expect(g['IN1K']).toBeLessThan(0);
+    // DINOv3 gives only a marginal gain over DINOv2 for VidEoMT.
+    const gain = rowOf('pretraining', 'pretraining:DINOv3:VidEoMT').ap - rowOf('pretraining', 'pretraining:DINOv2:VidEoMT').ap;
+    expect(gain).toBeGreaterThan(0);
+    expect(gain).toBeLessThan(0.5);
+    // DINOv3 and EVA-02 are slower than DINOv2 at about the same GFLOPs (App. B.3).
+    const v2 = rowOf('pretraining', 'pretraining:DINOv2:VidEoMT');
+    for (const other of ['DINOv3', 'EVA-02']) {
+      const o = rowOf('pretraining', `pretraining:${other}:VidEoMT`);
+      expect(o.fps).toBeLessThan(v2.fps);
+      expect(Math.abs(o.gflops - v2.gflops)).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it('model size: the gap to CAVIS shrinks as the ViT grows; ViT-L VidEoMT beats ViT-S CAVIS by a lot', () => {
+    const g = gaps('size');
+    expect(Math.abs(g['ViT-S']!)).toBeGreaterThan(Math.abs(g['ViT-B']!));
+    expect(Math.abs(g['ViT-B']!)).toBeGreaterThan(Math.abs(g['ViT-L']!));
+    const vitL = rowOf('size', 'size:ViT-L:VidEoMT');
+    const cavisS = rowOf('size', 'size:ViT-S:CAVIS');
+    expect(vitL.fps / cavisS.fps).toBeGreaterThan(8);
+    expect(vitL.ap - cavisS.ap).toBeGreaterThan(10);
+  });
+
+  it('model size: VidEoMT beats EoMT + CAVIS in AP and FPS at every size, with fewer parameters', () => {
+    for (const size of ['ViT-L', 'ViT-B', 'ViT-S']) {
+      const vid = rowOf('size', `size:${size}:VidEoMT`);
+      const eomt = rowOf('size', `size:${size}:EoMT+CAVIS`);
+      expect(vid.ap).toBeGreaterThan(eomt.ap);
+      expect(vid.fps).toBeGreaterThan(eomt.fps);
+      expect(parseInt(vid.params!, 10)).toBeLessThan(parseInt(eomt.params!, 10));
+    }
+  });
+
+  it('agrees with Table 1 and the YouTube-VIS 2019 comparison wherever the same model appears', () => {
+    const pairs: [string, number, number, number][] = [
+      // [analysis row, AP, GFLOPs, FPS] from the ablation table
+      ['size:ViT-L:CAVIS', ablation(0).ap, ablation(0).gflops, ablation(0).fps],
+      ['size:ViT-L:EoMT+CAVIS', ablation(1).ap, ablation(1).gflops, ablation(1).fps],
+      ['size:ViT-L:VidEoMT', ablation(6).ap, ablation(6).gflops, ablation(6).fps],
+      ['pretraining:DINOv2:CAVIS', ablation(0).ap, ablation(0).gflops, ablation(0).fps],
+      ['pretraining:DINOv2:VidEoMT', ablation(6).ap, ablation(6).gflops, ablation(6).fps],
+    ];
+    for (const [id, ap, gflops, fps] of pairs) {
+      const r = ANALYSES.flatMap((a) => a.rows).find((x) => x.id === id)!;
+      expect([r.ap, r.gflops, r.fps]).toEqual([ap, gflops, fps]);
+    }
+    // Table A repeats steps 4, 5 and 6 of Table 1.
+    for (const [id, step] of [['propagation:none', 4], ['propagation:only', 5], ['propagation:fusion', 6]] as const) {
+      const r = rowOf('propagation', id);
+      expect([r.ap, r.gflops]).toEqual([ablation(step).ap, ablation(step).gflops]);
+    }
+    expect(rowOf('trackers', 'trackers:videomt').ap).toBe(find('ytvis19', 'VidEoMT').metric);
+  });
+
+  it('propagation strategies: fusion is the most accurate, and TrackFormer’s scheme is considerably slower', () => {
+    const rows = analysis('propagation').rows;
+    const fusion = rowOf('propagation', 'propagation:fusion');
+    expect(Math.max(...rows.map((r) => r.ap))).toBe(fusion.ap);
+    expect(rowOf('propagation', 'propagation:reset').ap).toBeGreaterThan(rowOf('propagation', 'propagation:only').ap);
+    expect(rowOf('propagation', 'propagation:only').ap).toBeGreaterThan(rowOf('propagation', 'propagation:none').ap);
+    const tf = rowOf('propagation', 'propagation:trackformer');
+    expect(tf.ap).toBeLessThan(fusion.ap);
+    expect(tf.fps / fusion.fps).toBeLessThan(0.8);
+  });
+
+  it('EoMT + a tracker: VidEoMT is slightly more accurate than the best combination and nearly 4x faster', () => {
+    const rows = analysis('trackers').rows.filter((r) => !r.isVidEoMT);
+    const best = rows.reduce((a, b) => (b.ap > a.ap ? b : a));
+    expect(best.id).toBe('trackers:cavis');
+    const vid = rowOf('trackers', 'trackers:videomt');
+    expect(vid.ap).toBeGreaterThan(best.ap);
+    expect(vid.ap - best.ap).toBeLessThan(1);
+    expect(vid.fps / best.fps).toBeGreaterThan(3.5);
+    expect(vid.fps / best.fps).toBeLessThan(4);
+  });
+
+  it('decoder vs encoder-only: encoder-only is comparable in AP and much faster; fusion beats TrackFormer in the decoder', () => {
+    const tf = rowOf('decoder', 'decoder:trackformer');
+    const fus = rowOf('decoder', 'decoder:fusion');
+    const vid = rowOf('decoder', 'decoder:videomt');
+    expect(fus.ap).toBeGreaterThan(tf.ap);
+    expect(fus.fps).toBeGreaterThan(tf.fps);
+    expect(vid.ap - fus.ap).toBeLessThan(1);
+    expect(vid.fps / fus.fps).toBeGreaterThan(4);
+    expect(vid.gflops).toBeLessThan(fus.gflops);
   });
 });

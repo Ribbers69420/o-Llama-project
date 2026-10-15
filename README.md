@@ -1,24 +1,26 @@
 # o-Llama-project (`quantum-viz`)
 
-A Vite + React 19 + TypeScript + Tailwind CSS v4 prototype with three interactive views, together with the
+A Vite + React 19 + TypeScript + Tailwind CSS v4 prototype with four interactive views, together with the
 **Unified Quantum-Cognitive Framework (UQCF)** whitepaper and a few supporting documents.
 
 > **Status.** The paper ([`UQCF.tex`](./UQCF.tex)) is the design and theory document.
 > The **Φ Pipeline** view is a working prototype of its operational pipeline, including the feedback loop.
 > It runs a real numerical simulation, but on a toy state space, and its eight glyph operators are
 > stand-ins: the paper names them without defining them. The **Visualizer** and **Unified System**
-> views run on sample data. CI checks the app and compiles the paper on every pull request.
+> views run on sample data. The **VidEoMT Explorer** view is separate from the UQCF: an explainer for the
+> video-segmentation paper arXiv:2602.17807, described below. CI checks the app and compiles the paper on every pull request.
 
 ## What is in the repo
 
 | Path | What it is |
 |------|------------|
-| `src/App.tsx` | Nav that switches between the three views |
+| `src/App.tsx` | Nav that switches between the four views |
 | `src/components/PhiPipelineSimulator.tsx`, `FeedbackLoopPanel.tsx`, `PipelineCharts.tsx`, `pipelineUi.tsx` | **Φ Pipeline** view, described below |
 | `src/uqcf/` | Simulation core for the Φ Pipeline view: complex linear algebra (`linalg.ts`), the pipeline (`pipeline.ts`), the feedback loop (`feedbackLoop.ts`), scenario presets (`scenarios.ts`), and their tests |
 | `src/assets/fonts/` | Two small subsets of Noto Sans Symbols / Noto Sans Math, so the glyphs render on any device (OFL-1.1, see `OFL.txt`) |
 | `src/components/EnterpriseQuantumVisualizer.tsx` | **Visualizer** view: a collapsible tree rooted at |Ψ₀⟩ (Security Substrate, Operations Fabric, Cognitive Engine, and their sub-components). Nodes show performance bars (efficiency, scalability, resilience), a security profile (integrity, risk mitigation) and superposition / entanglement indicators. A placeholder "Ethical Constraint Module" is deliberately flagged as an integrity gap. All values are sample data. |
 | `src/components/UnifiedSystemComponent.tsx` | **Unified System** view: a validated form for Domain / Constraints / Objectives / Advantages. Runs in memory unless an `onSubmit` prop is supplied. |
+| `src/components/VidEoMTVisualizer.tsx`, `src/components/videomt/` | **VidEoMT Explorer** view, described below |
 | `src/monicaAIInstructions.ts` | Monica AI assistant system instructions plus TypeScript interfaces for ethical / quantum validation. Not imported by the UI. |
 | [`UQCF.tex`](./UQCF.tex) | The UQCF whitepaper (LaTeX source) |
 | `.github/workflows/ci.yml` | CI: app checks and the PDF build, described below |
@@ -35,10 +37,25 @@ npm run dev        # Vite dev server with HMR
 npm run build      # type-check (tsc -b) and production build into dist/
 npm run preview    # serve the production build
 npm run lint       # ESLint
-npm test           # Vitest: simulation-core, feedback-loop and chart tests
+npm test           # Vitest: simulation-core, feedback-loop, chart, and VidEoMT data and state-machine tests
 ```
 
 Dataset analyser: `node scripts/quality-check.mjs <file>`.
+
+## The VidEoMT Explorer view
+
+An interactive explainer for [VidEoMT: Your ViT is Secretly Also a Video Segmentation Model](https://arxiv.org/abs/2602.17807)
+(Norouzi et al., 2026), an encoder-only video segmentation model that replaces a tracker with query propagation and fusion.
+It has five parts: the stepwise simplification from CAVIS to VidEoMT (paper Table 1), an architecture diagram, a
+query-propagation walkthrough, benchmark charts for six datasets (Tables 2–5), and the paper's own analyses of
+pre-training, model size, propagation strategy and decoder-versus-encoder (§5.3 and Appendix B).
+
+- **Where the numbers come from.** Every number in `src/components/videomt/data.ts` is transcribed from the paper's tables.
+  `data.test.ts` re-derives what the paper's prose says about them ("over 14× faster than DVIS-DAQ", "+2.1 mIoU", and so on)
+  and checks that the same model has the same numbers wherever it appears, so a mistyped digit fails the tests.
+- **What is not paper data.** The objects, boxes and confidences in the query-propagation walkthrough are made up. The page says so.
+- **The walkthrough's state machine** lives in `demoMachine.ts` as a pure reducer. `demoMachine.test.ts` explores every reachable
+  state, so a step can never overlap another or push the frame past the last one.
 
 ## The Φ Pipeline view
 

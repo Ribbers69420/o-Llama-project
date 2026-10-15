@@ -63,3 +63,35 @@ export interface FrameState {
 }
 
 export type AnimationPhase = 'propagating' | 'transforming' | 'fusing' | 'complete';
+
+export type AnalysisKey = 'pretraining' | 'size' | 'propagation' | 'trackers' | 'decoder';
+
+export interface AnalysisRow {
+  id: string;
+  /** Rows in one group are compared with each other (one pre-training, one ViT size). */
+  group?: string;
+  label: string;
+  /** What the label stands for, when it is too long to print beside a bar. */
+  detail?: string;
+  ap: number;
+  fps: number;
+  gflops: number;
+  params?: string;
+  isVidEoMT: boolean;
+  /** The row the paper compares VidEoMT's AP against within its group (CAVIS). */
+  isReference?: boolean;
+  /** The change in AP that the paper prints next to a VidEoMT row (the ↑/↓ figure). */
+  printedDelta?: number;
+}
+
+export interface Analysis {
+  key: AnalysisKey;
+  title: string;
+  question: string;
+  /** Where the numbers come from in the paper. */
+  source: string;
+  setup: string;
+  takeaway: string;
+  note?: string;
+  rows: AnalysisRow[];
+}
