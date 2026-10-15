@@ -4,6 +4,11 @@ import SimplificationTable from './videomt/SimplificationTable';
 import ArchitectureDiagram from './videomt/ArchitectureDiagram';
 import QueryPropagationDemo from './videomt/QueryPropagationDemo';
 import PerformanceChart from './videomt/PerformanceChart';
+import { ABLATION_TABLE } from './videomt/data';
+
+const CAVIS_ROW = ABLATION_TABLE[0];
+const VIDEOMT_ROW = ABLATION_TABLE[ABLATION_TABLE.length - 1];
+const PARAMS_SAVED_M = parseInt(CAVIS_ROW.params, 10) - parseInt(VIDEOMT_ROW.params, 10);
 
 const Section: React.FC<{
   icon: React.ReactNode;
@@ -50,22 +55,22 @@ const VidEoMTVisualizer: React.FC = () => {
         {/* Key insight banner */}
         <div className="bg-gradient-to-r from-cyan-950/40 via-cyan-900/20 to-cyan-950/40 rounded-xl border border-cyan-800/30 p-4 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 text-center">
           <div>
-            <div className="text-3xl font-bold font-mono text-cyan-400">160</div>
+            <div className="text-3xl font-bold font-mono text-cyan-400">{VIDEOMT_ROW.fps}</div>
             <div className="text-[10px] uppercase tracking-wider text-cyan-600">FPS</div>
           </div>
           <div className="text-slate-600 text-lg">vs</div>
           <div>
-            <div className="text-3xl font-bold font-mono text-slate-500">15</div>
+            <div className="text-3xl font-bold font-mono text-slate-500">{CAVIS_ROW.fps}</div>
             <div className="text-[10px] uppercase tracking-wider text-slate-600">FPS (CAVIS)</div>
           </div>
           <div className="w-px h-10 bg-slate-700 hidden md:block" />
           <div>
-            <div className="text-lg font-bold font-mono text-cyan-400">68.6 <span className="text-sm text-slate-500">AP</span></div>
-            <div className="text-[10px] text-slate-600">vs 68.9 AP (CAVIS)</div>
+            <div className="text-lg font-bold font-mono text-cyan-400">{VIDEOMT_ROW.ap} <span className="text-sm text-slate-500">AP</span></div>
+            <div className="text-[10px] text-slate-600">vs {CAVIS_ROW.ap} AP (CAVIS)</div>
           </div>
           <div className="w-px h-10 bg-slate-700 hidden md:block" />
           <div>
-            <div className="text-lg font-bold font-mono text-emerald-400">-40M</div>
+            <div className="text-lg font-bold font-mono text-emerald-400">−{PARAMS_SAVED_M}M</div>
             <div className="text-[10px] text-slate-600">fewer params</div>
           </div>
         </div>
@@ -107,9 +112,11 @@ const VidEoMTVisualizer: React.FC = () => {
         </Section>
 
         {/* Footer */}
-        <footer className="text-center text-[10px] text-slate-700 font-mono pt-4 pb-8">
-          Interactive visualization of VidEoMT (Norouzi et al., 2025).
-          All data from the original paper. Built with React + Tailwind CSS.
+        <footer className="text-center text-[10px] text-slate-600 font-mono pt-4 pb-8 leading-relaxed">
+          Interactive visualization of VidEoMT (Norouzi et al., 2026, arXiv:2602.17807).
+          The ablation and benchmark numbers are transcribed from the paper&rsquo;s Tables 1&ndash;5.
+          <br />
+          The query-propagation demo is a schematic: its objects and confidences are made up.
         </footer>
       </div>
     </div>
