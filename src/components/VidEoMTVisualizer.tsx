@@ -121,7 +121,7 @@ const VidEoMTVisualizer: React.FC = () => {
         <Section
           icon={<FlaskConical className="w-4 h-4" />}
           title="Further Analyses"
-          subtitle="The paper's own ablations on pre-training, model size, propagation strategy and where the temporal trick lives (§5.3 and Appendix B)"
+          subtitle="The paper's own ablations on pre-training, model size, propagation strategy, adding a tracker to EoMT, and decoder versus encoder-only (§5.3 and Appendix B)"
         >
           <Analyses />
         </Section>

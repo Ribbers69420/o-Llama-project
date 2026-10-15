@@ -62,6 +62,12 @@ body {
   margin: 0;
 }
 
+/* The nav is sticky and up to ~4.4rem tall on a phone: keep it from covering an element that
+   scrolls into view on focus (WCAG 2.4.11). */
+html {
+  scroll-padding-top: 5rem;
+}
+
 /* Honour the system "reduce motion" setting: no spinning or pulsing indicators. */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -96,9 +96,12 @@ const Card: React.FC<{
   </div>
 );
 
+// Back and Next are "unavailable" while a step runs or at either end. They use aria-disabled, not
+// `disabled`: a disabled button drops keyboard focus to the page, so the next key press would go
+// nowhere. The reducer ignores the click anyway.
 const btn =
   'rounded-lg bg-slate-800 p-2 text-slate-300 transition-colors hover:bg-slate-700 hover:text-slate-100 ' +
-  'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-800 disabled:hover:text-slate-300 ' +
+  'aria-disabled:cursor-not-allowed aria-disabled:opacity-40 aria-disabled:hover:bg-slate-800 aria-disabled:hover:text-slate-300 ' +
   'outline-none focus-visible:ring-2 focus-visible:ring-slate-300';
 
 const QueryPropagationDemo: React.FC = () => {
@@ -165,9 +168,9 @@ const QueryPropagationDemo: React.FC = () => {
             type="button"
             aria-label={`Show frame t=${i}`}
             aria-current={i === shownFrame ? 'step' : undefined}
-            disabled={!idle}
+            aria-disabled={!idle}
             onClick={() => goTo(i)}
-            className={`relative h-20 w-28 shrink-0 overflow-hidden rounded-lg border-2 bg-slate-900 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-default ${
+            className={`relative h-20 w-28 shrink-0 overflow-hidden rounded-lg border-2 bg-slate-900 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-slate-300 aria-disabled:cursor-default ${
               i === shownFrame ? 'border-cyan-400' : 'border-slate-700 hover:border-slate-500'
             }`}
           >
@@ -186,7 +189,7 @@ const QueryPropagationDemo: React.FC = () => {
         <button type="button" aria-label="Reset to frame 0" onClick={reset} className={btn}>
           <RotateCcw className="h-4 w-4" />
         </button>
-        <button type="button" aria-label="Previous frame" onClick={stepBack} disabled={currentFrame === 0 || !idle} className={btn}>
+        <button type="button" aria-label="Previous frame" onClick={stepBack} aria-disabled={currentFrame === 0 || !idle} className={btn}>
           <SkipBack className="h-4 w-4" />
         </button>
         <button
@@ -197,7 +200,7 @@ const QueryPropagationDemo: React.FC = () => {
         >
           {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
         </button>
-        <button type="button" aria-label="Next frame" onClick={stepForward} disabled={currentFrame === LAST || !idle} className={btn}>
+        <button type="button" aria-label="Next frame" onClick={stepForward} aria-disabled={currentFrame === LAST || !idle} className={btn}>
           <SkipForward className="h-4 w-4" />
         </button>
       </div>
@@ -230,7 +233,7 @@ const QueryPropagationDemo: React.FC = () => {
               }
             />
           ) : (
-            <div className="flex aspect-[8/1] min-h-9 items-center text-xs text-slate-400">No Q_prev at t=0</div>
+            <div className="flex min-h-9 w-full items-center text-xs text-slate-400">No Q_prev at t=0</div>
           )}
         </Card>
 

@@ -67,7 +67,7 @@ const SimplificationTable: React.FC = () => {
               <th scope="col" className={`${TH} text-center`}>Q. fuse</th>
               <th scope="col" className={`${TH} text-left`}>AP</th>
               <th scope="col" className={`${TH} text-left`}>FPS</th>
-              <th scope="col" className={`${TH} text-right`}>Params</th>
+              <th scope="col" className="py-2 pl-3 pr-10 text-right text-[10px] font-medium uppercase tracking-wider text-slate-400 md:pr-3">Params</th>
             </tr>
           </thead>
           <tbody>
@@ -109,7 +109,7 @@ const SimplificationTable: React.FC = () => {
                     <td className="px-3 py-2">
                       <SparkBar value={row.fps} max={maxFPS} highlight={isFinal} />
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-xs text-slate-300">{row.params}</td>
+                    <td className="py-2 pl-3 pr-10 text-right font-mono text-xs text-slate-300 md:pr-3">{row.params}</td>
                   </tr>
                   {isExpanded && (
                     <tr id={detailId} className={isFinal ? 'bg-cyan-950/10' : 'bg-slate-800/20'}>

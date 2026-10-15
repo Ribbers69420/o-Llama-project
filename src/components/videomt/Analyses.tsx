@@ -2,21 +2,35 @@ import React, { useState } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { ANALYSES, gapToReference } from './data';
 import type { Analysis, AnalysisRow } from './types';
+import { formatDelta } from './vizMath';
 import { VIZ } from '../vizTokens';
 
 // Emphasis form, as in the benchmark chart: VidEoMT in the one accent, every other row gray.
 // Every bar is labelled directly, so nothing depends on colour to be told apart.
 const markColor = (r: AnalysisRow, active: boolean) => (r.isVidEoMT ? VIZ.series : active ? VIZ.crosshair : VIZ.reference);
 
-const sign = (n: number) => (n > 0 ? '+' : '−') + Math.abs(n).toFixed(1);
-
-/** The AP change against CAVIS: an arrow and a signed number, never colour alone. */
+/** The AP change against CAVIS: an arrow (none for no change) and a signed number, never colour alone. */
 const Gap: React.FC<{ gap: number }> = ({ gap }) => (
-  <span className="inline-flex items-center gap-0.5 whitespace-nowrap font-mono text-[11px]" style={{ color: VIZ.textSecondary }}>
-    {gap > 0 ? <ArrowUp className="h-3 w-3" aria-hidden="true" /> : <ArrowDown className="h-3 w-3" aria-hidden="true" />}
-    {sign(gap)} AP vs CAVIS
+  <span className="inline-flex items-center gap-0.5 font-mono text-[11px]" style={{ color: VIZ.textSecondary }}>
+    {gap > 0 && <ArrowUp className="h-3 w-3 shrink-0" aria-hidden="true" />}
+    {gap < 0 && <ArrowDown className="h-3 w-3 shrink-0" aria-hidden="true" />}
+    {formatDelta(gap)} AP vs CAVIS
   </span>
 );
+
+/** What a screen reader hears when a row is chosen: the numbers the row itself does not show. */
+const summary = (r: AnalysisRow, gap: number | null) =>
+  [
+    `${r.label}${r.group ? `, ${r.group}` : ''}`,
+    `${r.ap.toFixed(1)} AP`,
+    `${r.fps} FPS`,
+    `${r.gflops} GFLOPs`,
+    r.params ? `${r.params} parameters` : null,
+    gap !== null ? `${formatDelta(gap)} AP versus CAVIS` : null,
+    r.detail ?? null,
+  ]
+    .filter(Boolean)
+    .join(', ');
 
 interface Group {
   name: string | null;
@@ -37,7 +51,8 @@ const groupsOf = (a: Analysis): Group[] => {
 const Bars: React.FC<{
   analysis: Analysis;
   activeId: string | null;
-  onActivate: (id: string) => void;
+  /** `announce` is true for focus and click, false for a passing hover. */
+  onActivate: (id: string, announce: boolean) => void;
 }> = ({ analysis, activeId, onActivate }) => {
   const max = Math.max(...analysis.rows.map((r) => r.ap));
   return (
@@ -58,11 +73,10 @@ const Bars: React.FC<{
                 <li key={r.id}>
                   <button
                     type="button"
-                    aria-pressed={active}
-                    onMouseEnter={() => onActivate(r.id)}
-                    onFocus={() => onActivate(r.id)}
-                    onClick={() => onActivate(r.id)}
-                    className={`grid w-full grid-cols-[1fr_auto] items-center gap-x-2 gap-y-1 rounded px-1 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-slate-300 sm:grid-cols-[11rem_1fr_3.75rem] ${
+                    onMouseEnter={() => onActivate(r.id, false)}
+                    onFocus={() => onActivate(r.id, true)}
+                    onClick={() => onActivate(r.id, true)}
+                    className={`grid w-full scroll-mb-28 grid-cols-[1fr_auto] items-center gap-x-2 gap-y-1 rounded px-1 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-slate-300 sm:grid-cols-[11rem_1fr_3.75rem] ${
                       active ? 'bg-slate-800/60' : ''
                     }`}
                   >
@@ -78,7 +92,7 @@ const Bars: React.FC<{
                         bar gets its own line under the label, so it has the full width. */}
                     <span className="relative col-span-2 row-start-2 block h-4 sm:col-span-1 sm:col-start-2 sm:row-start-1">
                       <span
-                        className="absolute left-0 top-0 block h-4 rounded-r"
+                        className="forced-color-adjust-none absolute left-0 top-0 block h-4 rounded-r"
                         style={{ width: `calc((100% - 2.5rem) * ${ratio})`, background: markColor(r, active) }}
                       />
                       <span
@@ -109,53 +123,61 @@ const AnalysisTable: React.FC<{ analysis: Analysis }> = ({ analysis }) => {
   const grouped = analysis.rows.some((r) => r.group);
   const hasParams = analysis.rows.some((r) => r.params);
   const th = 'py-1.5 pr-3 font-medium';
+  // The last column keeps clear of the scroll-hint fade on phones, so its digits are not dimmed.
+  const lastTh = 'py-1.5 pr-8 text-right font-medium sm:pr-0';
+  const lastTd = 'py-1.5 pr-8 text-right sm:pr-0';
   return (
-    <div className="relative">
-      <div className="relative overflow-x-auto">
-        <table className="w-full text-xs">
-          <caption className="pb-2 text-left text-[10px] uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
-            {analysis.title} — {analysis.source}
-          </caption>
-          <thead>
-            <tr className="border-b border-slate-700 text-left text-[10px] uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
-              {grouped && <th scope="col" className={th}>Setting</th>}
-              <th scope="col" className={th}>Method</th>
-              <th scope="col" className={`${th} text-right`}>AP</th>
-              {grouped && <th scope="col" className={`${th} text-right`}>vs CAVIS</th>}
-              <th scope="col" className={`${th} text-right`}>FPS</th>
-              <th scope="col" className={`${th} text-right`}>GFLOPs</th>
-              {hasParams && <th scope="col" className="py-1.5 text-right font-medium">Params</th>}
-            </tr>
-          </thead>
-          <tbody className="font-mono tabular-nums">
-            {analysis.rows.map((r) => {
-              const gap = gapToReference(analysis.rows, r);
-              return (
-                <tr
-                  key={r.id}
-                  className="border-b border-slate-800"
-                  style={{ color: r.isVidEoMT ? VIZ.textPrimary : VIZ.textSecondary, fontWeight: r.isVidEoMT ? 600 : 400 }}
-                >
-                  {grouped && <td className="py-1.5 pr-3">{r.group}</td>}
-                  <th scope="row" className="py-1.5 pr-3 text-left font-[inherit]">
-                    {r.label}
-                  </th>
-                  <td className="py-1.5 pr-3 text-right">{r.ap.toFixed(1)}</td>
-                  {grouped && <td className="py-1.5 pr-3 text-right">{gap === null ? '–' : sign(gap)}</td>}
-                  <td className="py-1.5 pr-3 text-right">{r.fps}</td>
-                  <td className="py-1.5 pr-3 text-right">{r.gflops}</td>
-                  {hasParams && <td className="py-1.5 text-right">{r.params ?? '–'}</td>}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <div>
+      <div className="pb-2 text-[10px] uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
+        {analysis.title} — {analysis.source}
       </div>
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:hidden"
-        style={{ background: `linear-gradient(to left, ${VIZ.surface}, transparent)` }}
-      />
+      <div className="relative">
+        <div className="relative overflow-x-auto">
+          <table className="w-full text-xs">
+            <caption className="sr-only">
+              {analysis.title}: {analysis.question} ({analysis.source})
+            </caption>
+            <thead>
+              <tr className="border-b border-slate-700 text-left text-[10px] uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
+                {grouped && <th scope="col" className={th}>Setting</th>}
+                <th scope="col" className={th}>Method</th>
+                <th scope="col" className={`${th} text-right`}>AP</th>
+                {grouped && <th scope="col" className={`${th} text-right`}>vs CAVIS</th>}
+                <th scope="col" className={`${th} text-right`}>FPS</th>
+                <th scope="col" className={hasParams ? `${th} text-right` : lastTh}>GFLOPs</th>
+                {hasParams && <th scope="col" className={lastTh}>Params</th>}
+              </tr>
+            </thead>
+            <tbody className="font-mono tabular-nums">
+              {analysis.rows.map((r) => {
+                const gap = gapToReference(analysis.rows, r);
+                return (
+                  <tr
+                    key={r.id}
+                    className="border-b border-slate-800"
+                    style={{ color: r.isVidEoMT ? VIZ.textPrimary : VIZ.textSecondary, fontWeight: r.isVidEoMT ? 600 : 400 }}
+                  >
+                    {grouped && <td className="py-1.5 pr-3">{r.group}</td>}
+                    <th scope="row" className="py-1.5 pr-3 text-left font-[inherit]">
+                      {r.label}
+                    </th>
+                    <td className="py-1.5 pr-3 text-right">{r.ap.toFixed(1)}</td>
+                    {grouped && <td className="py-1.5 pr-3 text-right">{gap === null ? '–' : formatDelta(gap)}</td>}
+                    <td className="py-1.5 pr-3 text-right">{r.fps}</td>
+                    <td className={hasParams ? 'py-1.5 pr-3 text-right' : lastTd}>{r.gflops}</td>
+                    {hasParams && <td className={lastTd}>{r.params ?? '–'}</td>}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:hidden"
+          style={{ background: `linear-gradient(to left, ${VIZ.surface}, transparent)` }}
+        />
+      </div>
     </div>
   );
 };
@@ -163,11 +185,18 @@ const AnalysisTable: React.FC<{ analysis: Analysis }> = ({ analysis }) => {
 const Analyses: React.FC = () => {
   const [key, setKey] = useState(ANALYSES[0].key);
   const [view, setView] = useState<'chart' | 'table'>('chart');
+  // What the readout shows (hover, focus or tap) and what a screen reader is told (focus or tap only).
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [announcedId, setAnnouncedId] = useState<string | null>(null);
+  const activate = (id: string, announce: boolean) => {
+    setActiveId(id);
+    if (announce) setAnnouncedId(id);
+  };
 
   const analysis = ANALYSES.find((a) => a.key === key)!;
   // A selection that belongs to another analysis simply stops matching.
   const active = analysis.rows.find((r) => r.id === activeId) ?? null;
+  const announced = analysis.rows.find((r) => r.id === announcedId) ?? null;
   const activeGap = active ? gapToReference(analysis.rows, active) : null;
 
   return (
@@ -220,14 +249,14 @@ const Analyses: React.FC = () => {
             <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
               <span>AP, with FPS beside it</span>
               <span className="inline-flex items-center gap-1.5 normal-case tracking-normal">
-                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: VIZ.series }} /> VidEoMT
-                <span className="ml-2 inline-block h-2.5 w-2.5 rounded-full" style={{ background: VIZ.reference }} /> other
+                <span className="forced-color-adjust-none inline-block h-2.5 w-2.5 rounded-full" style={{ background: VIZ.series }} /> VidEoMT
+                <span className="forced-color-adjust-none ml-2 inline-block h-2.5 w-2.5 rounded-full" style={{ background: VIZ.reference }} /> other
               </span>
             </div>
-            <Bars analysis={analysis} activeId={active?.id ?? null} onActivate={setActiveId} />
+            <Bars analysis={analysis} activeId={active?.id ?? null} onActivate={activate} />
+            {/* Stays on screen while the bars are in view, so a tapped row's numbers are never far away. */}
             <div
-              aria-live="polite"
-              className="min-h-[3.25rem] rounded-lg border border-slate-800 px-4 py-2.5 text-xs"
+              className="sticky bottom-2 z-10 min-h-[3.25rem] rounded-lg border border-slate-700 px-4 py-2.5 text-xs shadow-lg shadow-black/40"
               style={{ background: VIZ.surface, color: VIZ.textSecondary }}
             >
               {active ? (
@@ -248,6 +277,9 @@ const Analyses: React.FC = () => {
               ) : (
                 <span>Hover, focus or tap a bar to read its numbers. The Table view lists every value.</span>
               )}
+            </div>
+            <div role="status" aria-live="polite" className="sr-only">
+              {announced ? summary(announced, gapToReference(analysis.rows, announced)) : ''}
             </div>
           </div>
         ) : (

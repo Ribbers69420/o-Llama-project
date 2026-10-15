@@ -285,7 +285,7 @@ export const ANALYSES: Analysis[] = [
     title: 'Pre-training',
     question: 'Does VidEoMT need large-scale pre-training?',
     source: 'Paper Table 8 (§5.3)',
-    setup: 'YouTube-VIS 2019 val, ViT-L. The ± figure is VidEoMT’s AP minus CAVIS’s AP with the same pre-training.',
+    setup: 'YouTube-VIS 2019 val, ViT-L. “vs CAVIS” is VidEoMT’s signed AP difference from CAVIS with the same pre-training, as the paper prints it.',
     takeaway:
       'With strong pre-training (DINOv3, DINOv2, EVA-02) VidEoMT is within 0.3 AP of CAVIS or ahead of it. The gap in CAVIS’s favour grows to 1.4 AP with ImageNet-21K and 2.7 AP with ImageNet-1K. The paper reads this as support for its hypothesis that large-scale pre-training is what lets a plain ViT take over the tracking modules.',
     note: 'DINOv3 and EVA-02 run slower than DINOv2 at about the same GFLOPs. The paper attributes a significant part of that to rotary position embeddings (App. B.3).',
@@ -302,7 +302,7 @@ export const ANALYSES: Analysis[] = [
     title: 'Model size',
     question: 'How does the size of the ViT change the picture?',
     source: 'Paper Tables 9 and B (§5.3, App. B.2)',
-    setup: 'YouTube-VIS 2019 val, DINOv2. The ± figure is VidEoMT’s AP minus CAVIS’s AP at the same size.',
+    setup: 'YouTube-VIS 2019 val, DINOv2. “vs CAVIS” is each row’s AP minus CAVIS’s AP at the same size. The paper prints it for VidEoMT only; the EoMT + CAVIS figures are computed here from Table B.',
     takeaway:
       'The gap to CAVIS shrinks as the ViT grows: 2.7 AP at ViT-S, 1.3 at ViT-B, 0.3 at ViT-L. VidEoMT with ViT-L (68.6 AP, 160 FPS) is still far more accurate than CAVIS with ViT-S (55.5 AP, 19 FPS) and several times faster. At every size VidEoMT beats EoMT + CAVIS in both AP and FPS.',
     rows: [
@@ -358,7 +358,7 @@ export const ANALYSES: Analysis[] = [
   },
 ];
 
-/** VidEoMT's AP minus the reference row of the same group, to the paper's one decimal. */
+/** A row's AP minus the reference row (CAVIS) of the same group, to the paper's one decimal. The paper prints this only for VidEoMT rows; for the others it is computed. */
 export function gapToReference(rows: AnalysisRow[], r: AnalysisRow): number | null {
   const ref = rows.find((x) => x.group === r.group && x.isReference);
   if (!ref || r.isReference) return null;

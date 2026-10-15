@@ -25,7 +25,8 @@ const rowName = (r: BenchmarkResult) => `${r.method} (${r.backbone})`;
 interface ChartProps {
   rows: BenchmarkResult[];
   activeId: string | null;
-  onActivate: (id: string) => void;
+  /** `announce` is true for focus and click, false for a passing hover. */
+  onActivate: (id: string, announce: boolean) => void;
 }
 
 const ScatterPlot: React.FC<ChartProps> = ({ rows, activeId, onActivate }) => {
@@ -64,16 +65,15 @@ const ScatterPlot: React.FC<ChartProps> = ({ rows, activeId, onActivate }) => {
                   key={r.id}
                   type="button"
                   aria-label={`${r.method}, ${r.backbone}: ${fmt(r.metric)} ${metricLabel(r)}, ${r.fps} FPS`}
-                  aria-pressed={active}
-                  onMouseEnter={() => onActivate(r.id)}
-                  onFocus={() => onActivate(r.id)}
-                  onClick={() => onActivate(r.id)}
+                  onMouseEnter={() => onActivate(r.id, false)}
+                  onFocus={() => onActivate(r.id, true)}
+                  onClick={() => onActivate(r.id, true)}
                   // 24px hit target around a 10-14px mark.
-                  className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                  className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 scroll-mb-28 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   style={{ left: `${toX(r.fps)}%`, top: `${toY(r.metric)}%`, zIndex: r.isVidEoMT ? 3 : active ? 2 : 1 }}
                 >
                   <span
-                    className="block rounded-full transition-transform duration-150"
+                    className="forced-color-adjust-none block rounded-full transition-transform duration-150"
                     style={{
                       width: size,
                       height: size,
@@ -129,17 +129,16 @@ const BarList: React.FC<ChartProps> = ({ rows, activeId, onActivate }) => {
           <li key={r.id}>
             <button
               type="button"
-              onMouseEnter={() => onActivate(r.id)}
-              onFocus={() => onActivate(r.id)}
-              onClick={() => onActivate(r.id)}
-              aria-pressed={active}
-              className={`grid w-full grid-cols-[1fr_auto] items-center gap-x-2 gap-y-1 rounded px-1 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-slate-300 sm:grid-cols-[9rem_1fr_3.75rem] sm:py-0.5 ${
+              onMouseEnter={() => onActivate(r.id, false)}
+              onFocus={() => onActivate(r.id, true)}
+              onClick={() => onActivate(r.id, true)}
+              className={`grid w-full scroll-mb-28 grid-cols-[1fr_auto] items-center gap-x-2 gap-y-1 rounded px-1 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-slate-300 sm:grid-cols-[9rem_1fr_3.75rem] sm:py-0.5 ${
                 active ? 'bg-slate-800/60' : ''
               }`}
             >
               <span className="col-start-1 row-start-1 min-w-0 truncate text-xs" style={{ color: r.isVidEoMT ? VIZ.textPrimary : VIZ.textSecondary }}>
-                <span className={r.isVidEoMT ? 'font-semibold' : ''}>{r.method}</span>
-                <span className="ml-1 text-[10px]" style={{ color: VIZ.textSecondary }}>
+                <span className={r.isVidEoMT ? 'font-semibold' : ''}>{r.method}</span>{' '}
+                <span className="text-[10px]" style={{ color: VIZ.textSecondary }}>
                   {r.backbone}
                 </span>
               </span>
@@ -147,7 +146,7 @@ const BarList: React.FC<ChartProps> = ({ rows, activeId, onActivate }) => {
                   its own line under the label, so it has the full width. */}
               <span className="relative col-span-2 row-start-2 block h-4 sm:col-span-1 sm:col-start-2 sm:row-start-1">
                 <span
-                  className="absolute left-0 top-0 block h-4 rounded-r"
+                  className="forced-color-adjust-none absolute left-0 top-0 block h-4 rounded-r"
                   style={{ width: `calc((100% - 2.5rem) * ${ratio})`, background: markColor(r, active) }}
                 />
                 <span
@@ -172,11 +171,15 @@ const ResultsTable: React.FC<{ rows: BenchmarkResult[]; dataset: DatasetKey }> =
   const sorted = [...rows].sort((a, b) => b.metric - a.metric);
   const second = sorted.find((r) => r.secondary)?.secondary?.name;
   return (
-    <div className="relative">
+    <div>
+      <div className="pb-2 text-[10px] uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
+        {DATASET_LABELS[dataset]} — sorted by {metricLabel(rows[0])}
+      </div>
+      <div className="relative">
       <div className="relative overflow-x-auto">
       <table className="w-full text-xs">
-        <caption className="pb-2 text-left text-[10px] uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
-          {DATASET_LABELS[dataset]} — sorted by {metricLabel(rows[0])}
+        <caption className="sr-only">
+          {DATASET_LABELS[dataset]}, sorted by {metricLabel(rows[0])}, with speed and compute (paper Tables 2–5)
         </caption>
         <thead>
           <tr className="border-b border-slate-700 text-left text-[10px] uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
@@ -186,7 +189,7 @@ const ResultsTable: React.FC<{ rows: BenchmarkResult[]; dataset: DatasetKey }> =
             <th scope="col" className="py-1.5 pr-3 text-right font-medium">{metricLabel(rows[0])}</th>
             {second && <th scope="col" className="py-1.5 pr-3 text-right font-medium">{second}</th>}
             <th scope="col" className="py-1.5 pr-3 text-right font-medium">FPS</th>
-            <th scope="col" className="py-1.5 text-right font-medium">GFLOPs</th>
+            <th scope="col" className="py-1.5 pr-8 text-right font-medium sm:pr-0">GFLOPs</th>
           </tr>
         </thead>
         <tbody className="font-mono tabular-nums">
@@ -202,7 +205,7 @@ const ResultsTable: React.FC<{ rows: BenchmarkResult[]; dataset: DatasetKey }> =
               <td className="py-1.5 pr-3 text-right">{fmt(r.metric)}</td>
               {second && <td className="py-1.5 pr-3 text-right">{r.secondary ? fmt(r.secondary.value) : '–'}</td>}
               <td className="py-1.5 pr-3 text-right">{r.fps}</td>
-              <td className="py-1.5 text-right">{r.gflops}</td>
+              <td className="py-1.5 pr-8 text-right sm:pr-0">{r.gflops}</td>
             </tr>
           ))}
         </tbody>
@@ -214,6 +217,7 @@ const ResultsTable: React.FC<{ rows: BenchmarkResult[]; dataset: DatasetKey }> =
         className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:hidden"
         style={{ background: `linear-gradient(to left, ${VIZ.surface}, transparent)` }}
       />
+      </div>
     </div>
   );
 };
@@ -221,11 +225,18 @@ const ResultsTable: React.FC<{ rows: BenchmarkResult[]; dataset: DatasetKey }> =
 const PerformanceChart: React.FC = () => {
   const [dataset, setDataset] = useState<DatasetKey>('ytvis19');
   const [view, setView] = useState<'chart' | 'table'>('chart');
+  // What the readout shows (hover, focus or tap) and what a screen reader is told (focus or tap only).
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [announcedId, setAnnouncedId] = useState<string | null>(null);
+  const activate = (id: string, announce: boolean) => {
+    setActiveId(id);
+    if (announce) setAnnouncedId(id);
+  };
 
   const rows = BENCHMARK_RESULTS.filter((r) => r.dataset === dataset);
   // A selection from another dataset simply stops matching; no effect needed to clear it.
   const active = rows.find((r) => r.id === activeId) ?? null;
+  const announced = rows.find((r) => r.id === announcedId) ?? null;
   const vid = rows.find((r) => r.isVidEoMT)!;
   const note = DATASET_NOTES[dataset];
 
@@ -274,16 +285,16 @@ const PerformanceChart: React.FC = () => {
           {/* Legend: emphasis colour and the backbone marker shapes. */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px]" style={{ color: VIZ.textSecondary }}>
             <span className="inline-flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: ACCENT }} /> VidEoMT
+              <span className="forced-color-adjust-none inline-block h-2.5 w-2.5 rounded-full" style={{ background: ACCENT }} /> VidEoMT
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: CONTEXT }} /> other methods
+              <span className="forced-color-adjust-none inline-block h-2.5 w-2.5 rounded-full" style={{ background: CONTEXT }} /> other methods
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: CONTEXT }} /> filled = ViT-L (DINOv2)
+              <span className="forced-color-adjust-none inline-block h-2.5 w-2.5 rounded-full" style={{ background: CONTEXT }} /> filled = ViT-L (DINOv2)
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: VIZ.surface, border: `2px solid ${CONTEXT}` }} /> ring = Swin-L (IN21K)
+              <span className="forced-color-adjust-none inline-block h-2.5 w-2.5 rounded-full" style={{ background: VIZ.surface, border: `2px solid ${CONTEXT}` }} /> ring = Swin-L (IN21K)
             </span>
           </div>
 
@@ -292,20 +303,19 @@ const PerformanceChart: React.FC = () => {
               <div className="mb-3 text-[10px] font-mono uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
                 Accuracy vs speed
               </div>
-              <ScatterPlot rows={rows} activeId={active?.id ?? null} onActivate={setActiveId} />
+              <ScatterPlot rows={rows} activeId={active?.id ?? null} onActivate={activate} />
             </div>
             <div className="order-3 rounded-lg border border-slate-800 p-4 lg:order-2" style={{ background: VIZ.surface }}>
               <div className="mb-3 text-[10px] font-mono uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
                 {metricLabel(vid)} and FPS by method
               </div>
-              <BarList rows={rows} activeId={active?.id ?? null} onActivate={setActiveId} />
+              <BarList rows={rows} activeId={active?.id ?? null} onActivate={activate} />
             </div>
 
             {/* Readout shared by both charts: hover, focus or tap a mark. Under the scatter plot on
                 phones and tablets, full width below both charts on desktop. */}
             <div
-              aria-live="polite"
-              className="order-2 min-h-[3.25rem] rounded-lg border border-slate-800 px-4 py-2.5 text-xs lg:order-3 lg:col-span-2"
+              className="sticky bottom-2 z-10 order-2 min-h-[6.5rem] rounded-lg border border-slate-700 px-4 py-2.5 text-xs shadow-lg shadow-black/40 sm:min-h-[4.25rem] lg:order-3 lg:col-span-2"
               style={{ background: VIZ.surface, color: VIZ.textSecondary }}
             >
               {active ? (
@@ -322,6 +332,13 @@ const PerformanceChart: React.FC = () => {
               ) : (
                 <span>Hover, focus or tap a mark to read its numbers. The Table view lists every value.</span>
               )}
+            </div>
+            <div role="status" aria-live="polite" className="sr-only">
+              {announced
+                ? `${announced.method}, ${announced.backbone}, ${fmt(announced.metric)} ${metricLabel(announced)}, ${announced.fps} FPS, ${announced.gflops} GFLOPs${
+                    announced.secondary ? `, ${announced.secondary.name} ${fmt(announced.secondary.value)}` : ''
+                  }`
+                : ''}
             </div>
           </div>
         </>

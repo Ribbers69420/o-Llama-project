@@ -130,3 +130,46 @@ describe('demo state machine', () => {
     expect(demoReducer(s, { type: 'step' })).toEqual(s); // nothing after the last frame
   });
 });
+
+describe('what each control actually does', () => {
+  const at = (frame: number, phase: DemoState['phase'], playing: boolean): DemoState => ({ frame, phase, playing });
+
+  it('Play/Pause flips autoplay, also in the middle of a step, and never moves the frame', () => {
+    expect(demoReducer(at(1, 'complete', false), { type: 'togglePlay' })).toEqual(at(1, 'complete', true));
+    expect(demoReducer(at(1, 'complete', true), { type: 'togglePlay' })).toEqual(at(1, 'complete', false));
+    expect(demoReducer(at(1, 'fusing', true), { type: 'togglePlay' })).toEqual(at(1, 'fusing', false));
+    expect(demoReducer(at(1, 'fusing', false), { type: 'togglePlay' })).toEqual(at(1, 'fusing', true));
+  });
+
+  it('Next starts a step and keeps autoplay on; the step ends one frame later, still playing', () => {
+    expect(demoReducer(at(1, 'complete', true), { type: 'step' })).toEqual(at(1, 'propagating', true));
+    expect(demoReducer(at(1, 'fusing', true), { type: 'tick' })).toEqual(at(2, 'complete', true));
+  });
+
+  it('Back goes to exactly the previous frame and stops autoplay', () => {
+    for (let f = 1; f <= LAST; f++) expect(demoReducer(at(f, 'complete', true), { type: 'back' })).toEqual(at(f - 1, 'complete', false));
+    expect(demoReducer(at(0, 'complete', false), { type: 'back' })).toEqual(at(0, 'complete', false));
+  });
+
+  it('Go-to lands on exactly the requested frame, from any frame, and stops autoplay', () => {
+    for (let from = 0; from <= LAST; from++) {
+      for (let to = 0; to <= LAST; to++) {
+        expect(demoReducer(at(from, 'complete', true), { type: 'goto', frame: to })).toEqual(at(to, 'complete', false));
+      }
+    }
+  });
+
+  it('autoplay from the start visits every frame in order and then stops by itself', () => {
+    let s = demoReducer(initialDemoState, { type: 'togglePlay' });
+    expect(s.playing).toBe(true);
+    const visited = [s.frame];
+    for (let i = 0; i < LAST; i++) {
+      s = demoReducer(s, { type: 'step' }); // what the autoplay timer sends after its pause
+      expect(s.phase).toBe('propagating');
+      while (s.phase !== 'complete') s = demoReducer(s, { type: 'tick' });
+      visited.push(s.frame);
+    }
+    expect(visited).toEqual(Array.from({ length: LAST + 1 }, (_, i) => i));
+    expect(s).toEqual(at(LAST, 'complete', false));
+  });
+});
