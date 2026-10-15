@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ABLATION_TABLE, BENCHMARK_RESULTS, DATASET_LABELS, DATASET_METRIC, DEMO_FRAMES } from './data';
+import { ABLATION_TABLE, BENCHMARK_RESULTS, DATASET_LABELS, DATASET_METRIC, DEMO_FRAMES, DEMO_SLOTS } from './data';
 import type { BenchmarkResult, DatasetKey } from './types';
 
 const DATASETS = Object.keys(DATASET_LABELS) as DatasetKey[];
@@ -148,5 +148,25 @@ describe('demo frames (schematic, not paper data)', () => {
         expect(DEMO_FRAMES.flatMap((g) => g.objects).filter((p) => p.id === o.id).every((p) => p.color === o.color)).toBe(true);
       }
     }
+  });
+
+  it('keeps an object in one query slot, never shares a slot, and puts the new object in a slot that was idle', () => {
+    const slotOf = new Map<string, number>();
+    for (const f of DEMO_FRAMES) {
+      const used = f.objects.map((o) => o.slot);
+      expect(new Set(used).size).toBe(used.length);
+      for (const o of f.objects) {
+        expect(o.slot).toBeGreaterThanOrEqual(0);
+        expect(o.slot).toBeLessThan(DEMO_SLOTS);
+        expect(slotOf.get(o.id) ?? o.slot).toBe(o.slot);
+        slotOf.set(o.id, o.slot);
+      }
+    }
+    DEMO_FRAMES.forEach((f, i) => {
+      for (const o of f.objects.filter((x) => x.isNew)) {
+        expect(i).toBeGreaterThan(0);
+        expect(DEMO_FRAMES[i - 1].objects.some((p) => p.slot === o.slot)).toBe(false);
+      }
+    });
   });
 });

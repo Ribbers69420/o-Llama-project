@@ -21,7 +21,7 @@ const Section: React.FC<{
       <div className="p-2 rounded-lg bg-slate-800 text-cyan-400">{icon}</div>
       <div>
         <h2 className="text-base font-semibold text-slate-200">{title}</h2>
-        <p className="text-xs text-slate-500">{subtitle}</p>
+        <p className="text-xs text-slate-400">{subtitle}</p>
       </div>
     </div>
     {children}
@@ -38,16 +38,16 @@ const VidEoMTVisualizer: React.FC = () => {
             <span className="text-cyan-400">VidEoMT</span>
             <span className="text-slate-400 font-normal"> Architecture Explorer</span>
           </h1>
-          <p className="text-sm text-slate-500 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm text-slate-400 max-w-2xl mx-auto leading-relaxed">
             Your ViT is Secretly Also a Video Segmentation Model — an encoder-only architecture
             that unifies segmentation and temporal tracking within a single Vision Transformer,
-            achieving <span className="text-cyan-400 font-mono">10x</span> speedup at competitive accuracy.
+            achieving up to <span className="text-cyan-400 font-mono">10x</span> speedup (5x&ndash;10x across benchmarks) at competitive accuracy.
           </p>
-          <div className="flex items-center justify-center gap-4 text-[10px] font-mono text-slate-600">
+          <div className="flex items-center justify-center gap-4 text-[10px] font-mono text-slate-400">
             <span>arxiv:2602.17807</span>
-            <span className="text-slate-700">|</span>
+            <span className="text-slate-600" aria-hidden="true">|</span>
             <span>Norouzi, Zulfikar, Cavagnero et al.</span>
-            <span className="text-slate-700">|</span>
+            <span className="text-slate-600" aria-hidden="true">|</span>
             <span>TU Eindhoven & RWTH Aachen</span>
           </div>
         </header>
@@ -56,30 +56,35 @@ const VidEoMTVisualizer: React.FC = () => {
         <div className="bg-gradient-to-r from-cyan-950/40 via-cyan-900/20 to-cyan-950/40 rounded-xl border border-cyan-800/30 p-4 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 text-center">
           <div>
             <div className="text-3xl font-bold font-mono text-cyan-400">{VIDEOMT_ROW.fps}</div>
-            <div className="text-[10px] uppercase tracking-wider text-cyan-600">FPS</div>
+            <div className="text-[10px] uppercase tracking-wider text-cyan-300">FPS</div>
           </div>
-          <div className="text-slate-600 text-lg">vs</div>
+          <div className="text-slate-400 text-lg">vs</div>
           <div>
             <div className="text-3xl font-bold font-mono text-slate-500">{CAVIS_ROW.fps}</div>
-            <div className="text-[10px] uppercase tracking-wider text-slate-600">FPS (CAVIS)</div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-400">FPS (CAVIS)</div>
           </div>
           <div className="w-px h-10 bg-slate-700 hidden md:block" />
           <div>
-            <div className="text-lg font-bold font-mono text-cyan-400">{VIDEOMT_ROW.ap} <span className="text-sm text-slate-500">AP</span></div>
-            <div className="text-[10px] text-slate-600">vs {CAVIS_ROW.ap} AP (CAVIS)</div>
+            <div className="text-lg font-bold font-mono text-cyan-400">{VIDEOMT_ROW.ap} <span className="text-sm text-slate-400">AP</span></div>
+            <div className="text-[10px] text-slate-400">vs {CAVIS_ROW.ap} AP (CAVIS)</div>
           </div>
           <div className="w-px h-10 bg-slate-700 hidden md:block" />
           <div>
             <div className="text-lg font-bold font-mono text-emerald-400">−{PARAMS_SAVED_M}M</div>
-            <div className="text-[10px] text-slate-600">fewer params</div>
+            <div className="text-[10px] text-slate-400">fewer params</div>
           </div>
         </div>
+
+        <p className="-mt-3 text-center text-[11px] leading-relaxed text-slate-400">
+          Banner: YouTube-VIS 2019 val, ViT-L (DINOv2). FPS measured on an H100 with FlashAttention-2 and torch.compile
+          (paper Table 1 and &sect;4). Speed-ups on the other benchmarks are below.
+        </p>
 
         {/* Section 1: Simplification Table */}
         <Section
           icon={<Layers className="w-4 h-4" />}
           title="From CAVIS to VidEoMT"
-          subtitle="Step-by-step removal of specialized modules — click rows for details"
+          subtitle="YouTube-VIS 2019 val (paper Table 1). Remove specialised modules (steps 1–4), then add query propagation and fusion (5–6). Select a step for details."
         >
           <SimplificationTable />
         </Section>
@@ -88,7 +93,7 @@ const VidEoMTVisualizer: React.FC = () => {
         <Section
           icon={<Zap className="w-4 h-4" />}
           title="Encoder-Only Architecture"
-          subtitle="Hover over blocks to see how each component works"
+          subtitle="Hover, focus or tap a block to read what the paper says about it"
         >
           <ArchitectureDiagram />
         </Section>
@@ -97,7 +102,7 @@ const VidEoMTVisualizer: React.FC = () => {
         <Section
           icon={<Play className="w-4 h-4" />}
           title="Query Propagation in Action"
-          subtitle="Watch how queries carry object identity across frames"
+          subtitle="Each query slot keeps following the same object from frame to frame"
         >
           <QueryPropagationDemo />
         </Section>
@@ -106,13 +111,13 @@ const VidEoMTVisualizer: React.FC = () => {
         <Section
           icon={<BarChart3 className="w-4 h-4" />}
           title="Benchmark Performance"
-          subtitle="Accuracy vs speed across 6 video segmentation benchmarks"
+          subtitle="Accuracy vs speed on 6 video segmentation benchmarks (paper Tables 2–5)"
         >
           <PerformanceChart />
         </Section>
 
         {/* Footer */}
-        <footer className="text-center text-[10px] text-slate-600 font-mono pt-4 pb-8 leading-relaxed">
+        <footer className="text-center text-[10px] text-slate-400 font-mono pt-4 pb-8 leading-relaxed">
           Interactive visualization of VidEoMT (Norouzi et al., 2026, arXiv:2602.17807).
           The ablation and benchmark numbers are transcribed from the paper&rsquo;s Tables 1&ndash;5.
           <br />

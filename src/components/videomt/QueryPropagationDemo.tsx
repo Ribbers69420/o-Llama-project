@@ -1,216 +1,341 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Play, Pause, SkipForward, SkipBack, RotateCcw } from 'lucide-react';
-import { DEMO_FRAMES } from './data';
-import type { AnimationPhase } from './types';
+import { DEMO_FRAMES, DEMO_SLOTS } from './data';
+import type { AnimationPhase, FrameState, ObjectQuery } from './types';
+import { VIZ } from '../vizTokens';
+
+const LAST = DEMO_FRAMES.length - 1;
+const PHASE_MS = 400; // time each phase of a step is shown
+const DWELL_MS = 1600; // autoplay pause on a finished frame
+
+const PHASES: AnimationPhase[] = ['propagating', 'transforming', 'fusing', 'complete'];
+const PHASE_TEXT: Record<AnimationPhase, string> = {
+  propagating: 'The output queries of frame t−1 become Q_prev.',
+  transforming: 'A linear layer transforms Q_prev.',
+  fusing: 'Linear(Q_prev) is added element-wise to Q_learned.',
+  complete: 'Q_fused enters the last L₂ ViT blocks; the output queries become the next Q_prev.',
+};
+
+const LEARNED = VIZ.reference; // a learned query: no object bound to it
+const INK_LIGHT = '#ffffff';
+const INK_DARK = '#020617';
+
+// Pick white or dark ink by the fill's luminance so a tile label always clears contrast.
+function luminance(hex: string): number {
+  const [r, g, b] = [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+const inkFor = (bg: string) =>
+  contrast(luminance(bg), luminance(INK_LIGHT)) >= contrast(luminance(bg), luminance(INK_DARK)) ? INK_LIGHT : INK_DARK;
+
+/** The object (if any) that each query slot follows in a frame. */
+const bindings = (frame: FrameState): (ObjectQuery | null)[] =>
+  Array.from({ length: DEMO_SLOTS }, (_, k) => frame.objects.find((o) => o.slot === k) ?? null);
+
+/** An object's shape inside a (x, y, w, h) box, in whatever SVG units the caller uses. */
+const Glyph: React.FC<{ o: ObjectQuery; x: number; y: number; w: number; h: number; opacity?: number }> = ({
+  o, x, y, w, h, opacity = 1,
+}) => {
+  const common = { fill: o.color, opacity };
+  switch (o.shape) {
+    case 'ellipse':
+      return <ellipse cx={x + w / 2} cy={y + h / 2} rx={w / 2} ry={h / 2} {...common} />;
+    case 'circle':
+      return <circle cx={x + w / 2} cy={y + h / 2} r={Math.min(w, h) / 2} {...common} />;
+    case 'triangle':
+      return <polygon points={`${x + w / 2},${y} ${x + w},${y + h} ${x},${y + h}`} {...common} />;
+    default:
+      return <rect x={x} y={y} width={w} height={h} rx={2} {...common} />;
+  }
+};
+
+type TileKind = 'learned' | 'tracked' | 'fused';
+
+/** One row of query slots. Colour comes with a letter and the slot number, never alone. */
+const SlotRow: React.FC<{
+  kind: TileKind;
+  slots: (ObjectQuery | null)[];
+  className?: string;
+  glowNew?: boolean;
+}> = ({ kind, slots, className = '', glowNew = false }) => (
+  <ol className={`grid grid-cols-8 gap-1 transition-all duration-300 ${className}`}>
+    {slots.map((slotObj, k) => {
+      // Learned queries and idle fused slots are plain learned vectors; a tracked slot that
+      // predicted no object is drawn hollow.
+      const o = kind === 'learned' ? null : slotObj;
+      const hollow = kind === 'tracked' && o === null;
+      const fill = o ? o.color : hollow ? 'transparent' : LEARNED;
+      const ink = hollow ? VIZ.textSecondary : inkFor(fill);
+      return (
+        <li
+          key={k}
+          className="flex aspect-square min-w-0 flex-col items-center justify-center rounded text-[10px] leading-none"
+          style={{
+            background: fill,
+            color: ink,
+            border: hollow ? `1px solid ${VIZ.reference}` : '1px solid transparent',
+            boxShadow: glowNew && o?.isNew ? `0 0 0 2px ${VIZ.surface}, 0 0 0 4px #6ee7b7` : undefined,
+          }}
+        >
+          <span className="text-xs font-semibold">{o ? o.label[0] : ''}</span>
+          <span className="font-mono">{k}</span>
+        </li>
+      );
+    })}
+  </ol>
+);
+
+const Card: React.FC<{
+  title: string;
+  active: boolean;
+  dim?: boolean;
+  caption: React.ReactNode;
+  className?: string;
+  children: React.ReactNode;
+}> = ({ title, active, dim = false, caption, className = '', children }) => (
+  <div
+    className={`rounded-lg border p-3 transition-colors duration-300 ${className}`}
+    style={{
+      background: VIZ.surface,
+      borderColor: active ? '#22d3ee' : '#334155',
+    }}
+  >
+    <div className="mb-2 font-mono text-[11px] tracking-wide text-slate-300">{title}</div>
+    <div className={`transition-opacity duration-300 ${dim ? 'opacity-40' : 'opacity-100'}`}>{children}</div>
+    <div className="mt-2 text-[11px] leading-snug text-slate-400">{caption}</div>
+  </div>
+);
+
+const btn =
+  'rounded-lg bg-slate-800 p-2 text-slate-300 transition-colors hover:bg-slate-700 hover:text-slate-100 ' +
+  'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-800 disabled:hover:text-slate-300 ' +
+  'outline-none focus-visible:ring-2 focus-visible:ring-slate-300';
 
 const QueryPropagationDemo: React.FC = () => {
   const [currentFrame, setCurrentFrame] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [phase, setPhase] = useState<AnimationPhase>('complete');
+  const [isPlaying, setIsPlaying] = useState(false);
+  const stripRef = useRef<HTMLDivElement>(null);
 
-  const advanceFrame = useCallback(() => {
-    if (currentFrame < DEMO_FRAMES.length - 1) {
-      setPhase('propagating');
-      setTimeout(() => setPhase('transforming'), 400);
-      setTimeout(() => setPhase('fusing'), 800);
-      setTimeout(() => {
-        setPhase('complete');
-        setCurrentFrame((f) => f + 1);
-      }, 1200);
-    } else {
-      setIsPlaying(false);
-    }
-  }, [currentFrame]);
-
+  // One step runs as a chain of timers, one phase at a time. Because the effect depends on
+  // the phase, its cleanup cancels the pending timer on Reset and on unmount, and only one
+  // step can ever be in flight, so currentFrame can never run past the last frame.
   useEffect(() => {
-    if (!isPlaying) return;
-    const timer = setInterval(advanceFrame, 2000);
-    return () => clearInterval(timer);
-  }, [isPlaying, advanceFrame]);
+    if (phase === 'complete') return;
+    const id = setTimeout(() => {
+      if (phase === 'propagating') setPhase('transforming');
+      else if (phase === 'transforming') setPhase('fusing');
+      else {
+        setCurrentFrame((f) => Math.min(f + 1, LAST));
+        setPhase('complete');
+      }
+    }, PHASE_MS);
+    return () => clearTimeout(id);
+  }, [phase]);
+
+  // Autoplay: after a dwell on a finished frame, start the next step. Reaching the last frame
+  // ends playback because `playing` is derived from the frame.
+  const playing = isPlaying && currentFrame < LAST;
+  useEffect(() => {
+    if (!playing || phase !== 'complete') return;
+    const id = setTimeout(() => setPhase('propagating'), DWELL_MS);
+    return () => clearTimeout(id);
+  }, [playing, phase]);
+
+  // While a step runs, show the frame it is heading for, so every phase animates the queries
+  // that really are being propagated.
+  const shownFrame = phase === 'complete' ? currentFrame : Math.min(currentFrame + 1, LAST);
+  const frame = DEMO_FRAMES[shownFrame];
+  const prevFrame = shownFrame > 0 ? DEMO_FRAMES[shownFrame - 1] : null;
+  const idle = phase === 'complete';
+
+  // Keep the current thumbnail in view when the strip scrolls (phones).
+  useEffect(() => {
+    const strip = stripRef.current;
+    const tile = strip?.children[shownFrame] as HTMLElement | undefined;
+    if (!strip || !tile) return;
+    strip.scrollTo({ left: tile.offsetLeft - (strip.clientWidth - tile.offsetWidth) / 2 });
+  }, [shownFrame]);
 
   const stepForward = () => {
-    if (currentFrame < DEMO_FRAMES.length - 1 && phase === 'complete') {
-      advanceFrame();
-    }
+    if (currentFrame < LAST && phase === 'complete') setPhase('propagating');
   };
-
   const stepBack = () => {
     if (currentFrame > 0 && phase === 'complete') {
+      setIsPlaying(false);
       setCurrentFrame((f) => f - 1);
     }
   };
-
   const reset = () => {
     setIsPlaying(false);
     setCurrentFrame(0);
     setPhase('complete');
   };
+  const togglePlay = () => {
+    if (currentFrame === LAST) {
+      setCurrentFrame(0); // replay from the start
+      setIsPlaying(true);
+    } else {
+      setIsPlaying(!playing);
+    }
+  };
+  const goTo = (i: number) => {
+    if (phase !== 'complete') return;
+    setIsPlaying(false);
+    setCurrentFrame(i);
+  };
 
-  const frame = DEMO_FRAMES[currentFrame];
-  const prevFrame = currentFrame > 0 ? DEMO_FRAMES[currentFrame - 1] : null;
+  const prevSlots = prevFrame ? bindings(prevFrame) : null;
+  const slots = bindings(frame);
+  const newObject = frame.objects.find((o) => o.isNew);
+  const status = idle
+    ? `Frame t=${currentFrame}. ${frame.objects.map((o) => `slot ${o.slot} follows ${o.label}${o.isNew ? ' (new)' : ''}`).join(', ')}.`
+    : '';
 
   return (
     <div className="space-y-5">
+      <p className="text-xs leading-relaxed text-slate-400">
+        A schematic of one query slot per object. The paper uses N = 200 learnable queries; {DEMO_SLOTS} are drawn.
+        The objects and confidences are made up.
+      </p>
+
       {/* Frame strip */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      <div ref={stripRef} role="group" aria-label="Demo frames" className="relative flex gap-2 overflow-x-auto pb-2">
         {DEMO_FRAMES.map((f, i) => (
-          <div
-            key={i}
-            className={`relative shrink-0 w-28 h-20 rounded-lg border-2 transition-all duration-300 ${
-              i === currentFrame
-                ? 'border-cyan-500 shadow-lg shadow-cyan-500/20'
-                : i < currentFrame
-                ? 'border-slate-600 opacity-70'
-                : 'border-slate-700 opacity-40'
-            } bg-slate-900 overflow-hidden cursor-pointer`}
-            onClick={() => { if (phase === 'complete') setCurrentFrame(i); }}
+          <button
+            key={f.frameIndex}
+            type="button"
+            aria-label={`Show frame t=${i}`}
+            aria-current={i === shownFrame ? 'step' : undefined}
+            disabled={!idle}
+            onClick={() => goTo(i)}
+            className={`relative h-20 w-28 shrink-0 overflow-hidden rounded-lg border-2 bg-slate-900 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-default ${
+              i === shownFrame ? 'border-cyan-400' : 'border-slate-700 hover:border-slate-500'
+            }`}
           >
-            {/* Frame label */}
-            <div className="absolute top-1 left-1 text-[8px] font-mono text-slate-500 bg-slate-900/80 px-1 rounded">
-              t={i}
-            </div>
-            {/* Objects as colored rectangles */}
-            <svg viewBox="0 0 100 80" className="w-full h-full">
-              {f.objects.map((obj) => (
-                <rect
-                  key={obj.id}
-                  x={obj.x}
-                  y={obj.y}
-                  width={obj.width}
-                  height={obj.height}
-                  fill={obj.color}
-                  opacity={i <= currentFrame ? 0.7 : 0.2}
-                  rx={2}
-                />
+            <span className="absolute left-1 top-1 rounded bg-slate-900/80 px-1 font-mono text-[10px] text-slate-400">t={i}</span>
+            <svg viewBox="0 0 100 80" className="h-full w-full" aria-hidden="true">
+              {f.objects.map((o) => (
+                <Glyph key={o.id} o={o} x={o.x} y={o.y} w={o.width} h={o.height} opacity={i <= shownFrame ? 0.9 : 0.3} />
               ))}
             </svg>
-          </div>
+          </button>
         ))}
       </div>
 
       {/* Controls */}
       <div className="flex items-center justify-center gap-3">
-        <button onClick={reset} className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700 transition-colors">
-          <RotateCcw className="w-4 h-4" />
+        <button type="button" aria-label="Reset to frame 0" onClick={reset} className={btn}>
+          <RotateCcw className="h-4 w-4" />
         </button>
-        <button onClick={stepBack} className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700 transition-colors" disabled={currentFrame === 0}>
-          <SkipBack className="w-4 h-4" />
+        <button type="button" aria-label="Previous frame" onClick={stepBack} disabled={currentFrame === 0 || !idle} className={btn}>
+          <SkipBack className="h-4 w-4" />
         </button>
         <button
-          onClick={() => setIsPlaying(!isPlaying)}
-          className="p-3 rounded-lg bg-cyan-600 text-white hover:bg-cyan-500 transition-colors"
+          type="button"
+          aria-label={playing ? 'Pause' : currentFrame === LAST ? 'Replay' : 'Play'}
+          onClick={togglePlay}
+          className="rounded-lg bg-cyan-700 p-3 text-white outline-none transition-colors hover:bg-cyan-600 focus-visible:ring-2 focus-visible:ring-slate-300"
         >
-          {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+          {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
         </button>
-        <button onClick={stepForward} className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700 transition-colors" disabled={currentFrame === DEMO_FRAMES.length - 1}>
-          <SkipForward className="w-4 h-4" />
+        <button type="button" aria-label="Next frame" onClick={stepForward} disabled={currentFrame === LAST || !idle} className={btn}>
+          <SkipForward className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Query state visualization */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {/* Learned queries */}
-        <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-purple-400 mb-2 font-mono">Q_learned</div>
-          <div className="flex gap-1 flex-wrap">
-            {frame.objects.map((obj) => (
-              <div
-                key={`learned-${obj.id}`}
-                className={`h-6 rounded transition-all duration-500 flex items-center justify-center text-[8px] font-mono text-white/80 ${
-                  phase === 'fusing' || phase === 'complete' ? 'opacity-100' : 'opacity-40'
-                }`}
-                style={{ backgroundColor: '#a855f7', width: `${100 / frame.objects.length - 2}%`, minWidth: 40 }}
-              >
-                {obj.label}
-              </div>
-            ))}
-          </div>
-          <div className="text-[9px] text-slate-500 mt-2 font-mono">Adaptability for new objects</div>
-        </div>
+      {/* Query state */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <Card
+          title="Q_learned"
+          active={false}
+          caption="The same learned vectors in every frame, so they can pick up objects that appear later."
+        >
+          <SlotRow kind="learned" slots={Array.from({ length: DEMO_SLOTS }, () => null)} />
+        </Card>
 
-        {/* Propagated queries (from previous frame) */}
-        <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-cyan-400 mb-2 font-mono">
-            Linear(Q_prev)
-          </div>
-          <div className="flex gap-1 flex-wrap">
-            {prevFrame ? prevFrame.objects.map((obj) => (
-              <div
-                key={`prop-${obj.id}`}
-                className={`h-6 rounded flex items-center justify-center text-[8px] font-mono text-white/80 transition-all duration-500 ${
-                  phase === 'propagating' ? 'translate-x-2 opacity-60' :
-                  phase === 'transforming' ? 'scale-95 opacity-80' :
-                  'opacity-100'
-                }`}
-                style={{ backgroundColor: obj.color, width: `${100 / prevFrame.objects.length - 2}%`, minWidth: 40 }}
-              >
-                {obj.label}
-              </div>
-            )) : (
-              <div className="text-[9px] text-slate-600 font-mono">No previous frame (t=0)</div>
-            )}
-          </div>
-          <div className="text-[9px] text-slate-500 mt-2 font-mono">Temporal context from t-1</div>
-        </div>
+        <Card
+          title="Linear(Q_prev)"
+          active={phase === 'propagating' || phase === 'transforming'}
+          caption={
+            prevSlots
+              ? 'Output queries of frame t−1 through a linear layer. Hollow: the query predicted no object.'
+              : 'Frame 0 has no previous frame, so only the learned queries are used.'
+          }
+        >
+          {prevSlots ? (
+            <SlotRow
+              kind="tracked"
+              slots={prevSlots}
+              className={
+                phase === 'propagating' ? 'translate-x-2 opacity-60' : phase === 'transforming' ? 'scale-95 opacity-80' : ''
+              }
+            />
+          ) : (
+            <div className="flex aspect-[8/1] min-h-9 items-center text-xs text-slate-400">No Q_prev at t=0</div>
+          )}
+        </Card>
 
-        {/* Fused queries */}
-        <div className={`rounded-lg border p-3 transition-all duration-500 ${
-          phase === 'complete'
-            ? 'bg-cyan-950/30 border-cyan-500/50'
-            : 'bg-slate-800/50 border-slate-700'
-        }`}>
-          <div className="text-[10px] uppercase tracking-wider text-amber-400 mb-2 font-mono">
-            Q_fused = Linear(Q_prev) + Q_learned
+        <Card
+          title={prevSlots ? 'Q_fused = Linear(Q_prev) + Q_learned' : 'Q_fused = Q_learned (t=0)'}
+          active={phase === 'fusing'}
+          dim={phase === 'propagating' || phase === 'transforming'}
+          caption="Past context plus the learned queries. This is what the last L₂ ViT blocks receive with the patch tokens."
+        >
+          <SlotRow kind="fused" slots={prevSlots ?? Array.from({ length: DEMO_SLOTS }, () => null)} />
+        </Card>
+
+        <Card
+          className="md:col-span-3"
+          title="Output queries at frame t (they become Q_prev for frame t+1)"
+          active={phase === 'complete'}
+          dim={!idle}
+          caption={
+            newObject
+              ? `A new object (${newObject.label}) takes slot ${newObject.slot}, which was idle until now.`
+              : 'Each slot keeps following the same object. Hollow slots are free for objects that appear later.'
+          }
+        >
+          <div className="max-w-md">
+            <SlotRow kind="tracked" slots={slots} glowNew />
           </div>
-          <div className="flex gap-1 flex-wrap">
-            {frame.objects.map((obj) => (
-              <div
-                key={`fused-${obj.id}`}
-                className={`h-6 rounded flex items-center justify-center text-[8px] font-mono text-white/80 transition-all duration-500 ${
-                  phase === 'complete' ? 'opacity-100 scale-100' : 'opacity-30 scale-95'
-                }`}
-                style={{
-                  backgroundColor: obj.color,
-                  width: `${100 / frame.objects.length - 2}%`,
-                  minWidth: 40,
-                  boxShadow: obj.isNew && phase === 'complete' ? '0 0 8px rgba(16, 185, 129, 0.5)' : 'none',
-                }}
-              >
-                {obj.label}
-                {obj.isNew && <span className="ml-1 text-emerald-300">*</span>}
-              </div>
-            ))}
-          </div>
-          <div className="text-[9px] text-slate-500 mt-2 font-mono">
-            {frame.objects.some(o => o.isNew)
-              ? 'New object detected via learned queries!'
-              : 'Fed into last L₂ ViT blocks'}
-          </div>
-        </div>
+        </Card>
       </div>
 
       {/* Phase indicator */}
-      <div className="flex items-center justify-center gap-4 text-[10px] font-mono">
-        {(['propagating', 'transforming', 'fusing', 'complete'] as AnimationPhase[]).map((p) => (
-          <div key={p} className={`flex items-center gap-1 transition-colors ${phase === p ? 'text-cyan-400' : 'text-slate-600'}`}>
-            <div className={`w-2 h-2 rounded-full transition-colors ${phase === p ? 'bg-cyan-400 animate-pulse' : 'bg-slate-700'}`} />
-            {p}
-          </div>
-        ))}
+      <div>
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-mono text-[11px]">
+          {PHASES.map((p) => (
+            <div key={p} className={`flex items-center gap-1 transition-colors ${phase === p ? 'text-cyan-300' : 'text-slate-400'}`}>
+              <div className={`h-2 w-2 rounded-full transition-colors ${phase === p ? 'bg-cyan-300 motion-safe:animate-pulse' : 'bg-slate-600'}`} />
+              {p}
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 min-h-8 text-center text-xs text-slate-400">{PHASE_TEXT[phase]}</p>
       </div>
 
-      {/* Object tracking legend */}
-      <div className="flex flex-wrap gap-3 justify-center">
-        {frame.objects.map((obj) => (
-          <div key={obj.id} className="flex items-center gap-2 text-xs">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: obj.color }} />
-            <span className="font-mono text-slate-400">
-              {obj.label}
-              <span className="text-slate-600 ml-1">({(obj.confidence * 100).toFixed(0)}%)</span>
-              {obj.isNew && <span className="text-emerald-400 ml-1">NEW</span>}
+      {/* Legend */}
+      <ul className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+        {frame.objects.map((o) => (
+          <li key={o.id} className="flex items-center gap-2 text-xs text-slate-300">
+            <svg viewBox="0 0 12 12" className="h-3 w-3" aria-hidden="true">
+              <Glyph o={o} x={1} y={1} w={10} h={10} />
+            </svg>
+            <span className="font-mono">
+              {o.label}
+              <span className="ml-1 text-slate-400">slot {o.slot} · {(o.confidence * 100).toFixed(0)}%</span>
+              {o.isNew && <span className="ml-1 text-emerald-300">NEW</span>}
             </span>
-          </div>
+          </li>
         ))}
+      </ul>
+
+      <div role="status" aria-live="polite" className="sr-only">
+        {status}
       </div>
     </div>
   );

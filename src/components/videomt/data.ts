@@ -242,60 +242,65 @@ export const BENCHMARK_RESULTS: BenchmarkResult[] = [
   result('vspw', 'VidEoMT', 'ViT-L', 64.9, 1909, 73, { name: 'mVC16', value: 95.0 }),
 ];
 
+/** Query slots drawn in the demo. The paper uses N = 200 learnable queries. */
+export const DEMO_SLOTS = 8;
+
 // Schematic demo frames for the query-propagation walkthrough. These are NOT paper data:
 // the objects, boxes and confidences are made up to illustrate the mechanism.
+// What they do illustrate: an object keeps the same query slot for the whole clip, and a
+// newly appearing object (the cat, frame 3) lands in a slot that was idle before.
 // Entity colours are slots 1-4 of the dataviz categorical palette (dark steps); every
-// object is also named in text, so identity never depends on colour alone.
+// object also has a name, a one-letter tag and a shape, so identity never depends on colour.
 export const DEMO_FRAMES: FrameState[] = [
   {
     frameIndex: 0,
     objects: [
-      { id: 'obj-a', label: 'Person', color: '#3987e5', x: 20, y: 30, width: 18, height: 40, confidence: 0.95, isNew: false },
-      { id: 'obj-b', label: 'Dog', color: '#d95926', x: 55, y: 50, width: 14, height: 20, confidence: 0.91, isNew: false },
-      { id: 'obj-c', label: 'Ball', color: '#199e70', x: 75, y: 65, width: 8, height: 8, confidence: 0.88, isNew: false },
+      { id: 'obj-a', label: 'Person', slot: 0, shape: 'rect', color: '#3987e5', x: 20, y: 30, width: 18, height: 40, confidence: 0.95, isNew: false },
+      { id: 'obj-b', label: 'Dog', slot: 1, shape: 'ellipse', color: '#d95926', x: 55, y: 50, width: 14, height: 20, confidence: 0.91, isNew: false },
+      { id: 'obj-c', label: 'Ball', slot: 2, shape: 'circle', color: '#199e70', x: 75, y: 65, width: 8, height: 8, confidence: 0.88, isNew: false },
     ],
   },
   {
     frameIndex: 1,
     objects: [
-      { id: 'obj-a', label: 'Person', color: '#3987e5', x: 24, y: 28, width: 18, height: 40, confidence: 0.96, isNew: false },
-      { id: 'obj-b', label: 'Dog', color: '#d95926', x: 50, y: 48, width: 14, height: 20, confidence: 0.93, isNew: false },
-      { id: 'obj-c', label: 'Ball', color: '#199e70', x: 68, y: 60, width: 8, height: 8, confidence: 0.85, isNew: false },
+      { id: 'obj-a', label: 'Person', slot: 0, shape: 'rect', color: '#3987e5', x: 24, y: 28, width: 18, height: 40, confidence: 0.96, isNew: false },
+      { id: 'obj-b', label: 'Dog', slot: 1, shape: 'ellipse', color: '#d95926', x: 50, y: 48, width: 14, height: 20, confidence: 0.93, isNew: false },
+      { id: 'obj-c', label: 'Ball', slot: 2, shape: 'circle', color: '#199e70', x: 68, y: 60, width: 8, height: 8, confidence: 0.85, isNew: false },
     ],
   },
   {
     frameIndex: 2,
     objects: [
-      { id: 'obj-a', label: 'Person', color: '#3987e5', x: 30, y: 25, width: 18, height: 40, confidence: 0.94, isNew: false },
-      { id: 'obj-b', label: 'Dog', color: '#d95926', x: 44, y: 45, width: 14, height: 20, confidence: 0.90, isNew: false },
-      { id: 'obj-c', label: 'Ball', color: '#199e70', x: 60, y: 55, width: 8, height: 8, confidence: 0.82, isNew: false },
+      { id: 'obj-a', label: 'Person', slot: 0, shape: 'rect', color: '#3987e5', x: 30, y: 25, width: 18, height: 40, confidence: 0.94, isNew: false },
+      { id: 'obj-b', label: 'Dog', slot: 1, shape: 'ellipse', color: '#d95926', x: 44, y: 45, width: 14, height: 20, confidence: 0.90, isNew: false },
+      { id: 'obj-c', label: 'Ball', slot: 2, shape: 'circle', color: '#199e70', x: 60, y: 55, width: 8, height: 8, confidence: 0.82, isNew: false },
     ],
   },
   {
     frameIndex: 3,
     objects: [
-      { id: 'obj-a', label: 'Person', color: '#3987e5', x: 36, y: 22, width: 18, height: 40, confidence: 0.93, isNew: false },
-      { id: 'obj-b', label: 'Dog', color: '#d95926', x: 38, y: 42, width: 14, height: 20, confidence: 0.87, isNew: false },
-      { id: 'obj-c', label: 'Ball', color: '#199e70', x: 52, y: 50, width: 8, height: 8, confidence: 0.79, isNew: false },
-      { id: 'obj-d', label: 'Cat', color: '#c98500', x: 80, y: 55, width: 12, height: 16, confidence: 0.72, isNew: true },
+      { id: 'obj-a', label: 'Person', slot: 0, shape: 'rect', color: '#3987e5', x: 36, y: 22, width: 18, height: 40, confidence: 0.93, isNew: false },
+      { id: 'obj-b', label: 'Dog', slot: 1, shape: 'ellipse', color: '#d95926', x: 38, y: 42, width: 14, height: 20, confidence: 0.87, isNew: false },
+      { id: 'obj-c', label: 'Ball', slot: 2, shape: 'circle', color: '#199e70', x: 52, y: 50, width: 8, height: 8, confidence: 0.79, isNew: false },
+      { id: 'obj-d', label: 'Cat', slot: 3, shape: 'triangle', color: '#c98500', x: 80, y: 55, width: 12, height: 16, confidence: 0.72, isNew: true },
     ],
   },
   {
     frameIndex: 4,
     objects: [
-      { id: 'obj-a', label: 'Person', color: '#3987e5', x: 42, y: 20, width: 18, height: 40, confidence: 0.95, isNew: false },
-      { id: 'obj-b', label: 'Dog', color: '#d95926', x: 32, y: 40, width: 14, height: 20, confidence: 0.89, isNew: false },
-      { id: 'obj-c', label: 'Ball', color: '#199e70', x: 45, y: 48, width: 8, height: 8, confidence: 0.83, isNew: false },
-      { id: 'obj-d', label: 'Cat', color: '#c98500', x: 72, y: 50, width: 12, height: 16, confidence: 0.88, isNew: false },
+      { id: 'obj-a', label: 'Person', slot: 0, shape: 'rect', color: '#3987e5', x: 42, y: 20, width: 18, height: 40, confidence: 0.95, isNew: false },
+      { id: 'obj-b', label: 'Dog', slot: 1, shape: 'ellipse', color: '#d95926', x: 32, y: 40, width: 14, height: 20, confidence: 0.89, isNew: false },
+      { id: 'obj-c', label: 'Ball', slot: 2, shape: 'circle', color: '#199e70', x: 45, y: 48, width: 8, height: 8, confidence: 0.83, isNew: false },
+      { id: 'obj-d', label: 'Cat', slot: 3, shape: 'triangle', color: '#c98500', x: 72, y: 50, width: 12, height: 16, confidence: 0.88, isNew: false },
     ],
   },
   {
     frameIndex: 5,
     objects: [
-      { id: 'obj-a', label: 'Person', color: '#3987e5', x: 48, y: 18, width: 18, height: 40, confidence: 0.96, isNew: false },
-      { id: 'obj-b', label: 'Dog', color: '#d95926', x: 28, y: 38, width: 14, height: 20, confidence: 0.91, isNew: false },
-      { id: 'obj-c', label: 'Ball', color: '#199e70', x: 38, y: 45, width: 8, height: 8, confidence: 0.86, isNew: false },
-      { id: 'obj-d', label: 'Cat', color: '#c98500', x: 65, y: 46, width: 12, height: 16, confidence: 0.92, isNew: false },
+      { id: 'obj-a', label: 'Person', slot: 0, shape: 'rect', color: '#3987e5', x: 48, y: 18, width: 18, height: 40, confidence: 0.96, isNew: false },
+      { id: 'obj-b', label: 'Dog', slot: 1, shape: 'ellipse', color: '#d95926', x: 28, y: 38, width: 14, height: 20, confidence: 0.91, isNew: false },
+      { id: 'obj-c', label: 'Ball', slot: 2, shape: 'circle', color: '#199e70', x: 38, y: 45, width: 8, height: 8, confidence: 0.86, isNew: false },
+      { id: 'obj-d', label: 'Cat', slot: 3, shape: 'triangle', color: '#c98500', x: 65, y: 46, width: 12, height: 16, confidence: 0.92, isNew: false },
     ],
   },
 ];

@@ -53,7 +53,7 @@ function App() {
           onClick={() => setView('videomt')}
           className={`px-3 py-1.5 text-[11px] font-mono rounded transition-colors ${
             view === 'videomt'
-              ? 'bg-cyan-600 text-white'
+              ? 'bg-cyan-700 text-white'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
           }`}
         >

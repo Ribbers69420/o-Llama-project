@@ -16,6 +16,9 @@ const markColor = (r: BenchmarkResult, active: boolean) => (r.isVidEoMT ? ACCENT
 
 const metricLabel = (r: BenchmarkResult) => r.metricName.replace('_', ' ');
 
+/** The paper prints one decimal everywhere, so 42.0 and 95.0 keep their .0. */
+const fmt = (n: number) => n.toFixed(1);
+
 const rowName = (r: BenchmarkResult) => `${r.method} (${r.backbone})`;
 
 const FPS_TICKS = [2, 5, 10, 20, 50, 100, 200];
@@ -57,22 +60,19 @@ const ScatterPlot: React.FC<ChartProps> = ({ rows, activeId, onActivate }) => {
   return (
     <div>
       <div className="flex">
-        {/* y axis label + ticks */}
-        <div className="relative w-10 shrink-0 mb-8">
-          {yTicks.map((t) => (
-            <span
-              key={t}
-              className="absolute right-1 -translate-y-1/2 text-[10px] font-mono tabular-nums"
-              style={{ top: `${toY(t)}%`, color: VIZ.textMuted }}
-            >
-              {t}
-            </span>
-          ))}
-        </div>
+        {/* Spacer for the y tick labels, which are drawn inside their gridlines below. */}
+        <div className="w-10 shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="relative h-64 sm:h-72" style={{ borderLeft: `1px solid ${VIZ.axis}`, borderBottom: `1px solid ${VIZ.axis}` }}>
             {yTicks.map((t) => (
-              <div key={`gy-${t}`} className="absolute inset-x-0" style={{ top: `${toY(t)}%`, borderTop: `1px solid ${VIZ.grid}` }} />
+              <div key={`gy-${t}`} className="absolute inset-x-0" style={{ top: `${toY(t)}%`, borderTop: `1px solid ${VIZ.grid}` }}>
+                <span
+                  className="absolute right-full top-0 mr-2 -translate-y-1/2 text-[10px] font-mono tabular-nums"
+                  style={{ color: VIZ.textSecondary }}
+                >
+                  {t}
+                </span>
+              </div>
             ))}
             {xTicks.map((t) => (
               <div key={`gx-${t}`} className="absolute inset-y-0" style={{ left: `${toX(t)}%`, borderLeft: `1px solid ${VIZ.grid}` }} />
@@ -87,13 +87,13 @@ const ScatterPlot: React.FC<ChartProps> = ({ rows, activeId, onActivate }) => {
                 <button
                   key={r.id}
                   type="button"
-                  aria-label={`${r.method}, ${r.backbone}: ${r.metric} ${metricLabel(r)}, ${r.fps} FPS`}
+                  aria-label={`${r.method}, ${r.backbone}: ${fmt(r.metric)} ${metricLabel(r)}, ${r.fps} FPS`}
                   aria-pressed={active}
                   onMouseEnter={() => onActivate(r.id)}
                   onFocus={() => onActivate(r.id)}
                   onClick={() => onActivate(r.id)}
-                  // 28px hit target around a 10-14px mark.
-                  className="absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                  // 24px hit target around a 10-14px mark.
+                  className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   style={{ left: `${toX(r.fps)}%`, top: `${toY(r.metric)}%`, zIndex: r.isVidEoMT ? 3 : active ? 2 : 1 }}
                 >
                   <span
@@ -125,7 +125,7 @@ const ScatterPlot: React.FC<ChartProps> = ({ rows, activeId, onActivate }) => {
               <span
                 key={t}
                 className="absolute top-1 -translate-x-1/2 text-[10px] font-mono tabular-nums"
-                style={{ left: `${toX(t)}%`, color: VIZ.textMuted }}
+                style={{ left: `${toX(t)}%`, color: VIZ.textSecondary }}
               >
                 {t}
               </span>
@@ -163,7 +163,7 @@ const BarList: React.FC<ChartProps> = ({ rows, activeId, onActivate }) => {
             >
               <span className="min-w-0 truncate text-xs" style={{ color: r.isVidEoMT ? VIZ.textPrimary : VIZ.textSecondary }}>
                 <span className={r.isVidEoMT ? 'font-semibold' : ''}>{r.method}</span>
-                <span className="ml-1 text-[10px]" style={{ color: VIZ.textMuted }}>
+                <span className="ml-1 text-[10px]" style={{ color: VIZ.textSecondary }}>
                   {r.backbone}
                 </span>
               </span>
@@ -177,10 +177,10 @@ const BarList: React.FC<ChartProps> = ({ rows, activeId, onActivate }) => {
                   className="absolute top-0 flex h-4 items-center text-[11px] font-mono tabular-nums"
                   style={{ left: `calc((100% - 2.5rem) * ${ratio} + 0.4rem)`, color: VIZ.textPrimary }}
                 >
-                  {r.metric}
+                  {fmt(r.metric)}
                 </span>
               </span>
-              <span className="text-right text-[11px] font-mono tabular-nums" style={{ color: r.isVidEoMT ? VIZ.textPrimary : VIZ.textMuted }}>
+              <span className="text-right text-[11px] font-mono tabular-nums" style={{ color: r.isVidEoMT ? VIZ.textPrimary : VIZ.textSecondary }}>
                 {r.fps} FPS
               </span>
             </button>
@@ -195,20 +195,21 @@ const ResultsTable: React.FC<{ rows: BenchmarkResult[]; dataset: DatasetKey }> =
   const sorted = [...rows].sort((a, b) => b.metric - a.metric);
   const second = sorted.find((r) => r.secondary)?.secondary?.name;
   return (
-    <div className="overflow-x-auto">
+    <div className="relative">
+      <div className="relative overflow-x-auto">
       <table className="w-full text-xs">
-        <caption className="pb-2 text-left text-[10px] uppercase tracking-wider" style={{ color: VIZ.textMuted }}>
+        <caption className="pb-2 text-left text-[10px] uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
           {DATASET_LABELS[dataset]} — sorted by {metricLabel(rows[0])}
         </caption>
         <thead>
-          <tr className="border-b border-slate-700 text-left text-[10px] uppercase tracking-wider" style={{ color: VIZ.textMuted }}>
+          <tr className="border-b border-slate-700 text-left text-[10px] uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
             <th scope="col" className="py-1.5 pr-3 font-medium">Method</th>
             <th scope="col" className="py-1.5 pr-3 font-medium">Backbone</th>
-            <th scope="col" className="py-1.5 pr-3 font-medium">Pre-training</th>
+            <th scope="col" className="hidden py-1.5 pr-3 font-medium sm:table-cell">Pre-training</th>
             <th scope="col" className="py-1.5 pr-3 text-right font-medium">{metricLabel(rows[0])}</th>
             {second && <th scope="col" className="py-1.5 pr-3 text-right font-medium">{second}</th>}
-            <th scope="col" className="py-1.5 pr-3 text-right font-medium">GFLOPs</th>
-            <th scope="col" className="py-1.5 text-right font-medium">FPS</th>
+            <th scope="col" className="py-1.5 pr-3 text-right font-medium">FPS</th>
+            <th scope="col" className="py-1.5 text-right font-medium">GFLOPs</th>
           </tr>
         </thead>
         <tbody className="font-mono tabular-nums">
@@ -220,15 +221,22 @@ const ResultsTable: React.FC<{ rows: BenchmarkResult[]; dataset: DatasetKey }> =
             >
               <th scope="row" className="py-1.5 pr-3 text-left font-[inherit]">{r.method}</th>
               <td className="py-1.5 pr-3">{r.backbone}</td>
-              <td className="py-1.5 pr-3">{r.pretraining}</td>
-              <td className="py-1.5 pr-3 text-right">{r.metric}</td>
-              {second && <td className="py-1.5 pr-3 text-right">{r.secondary?.value ?? '–'}</td>}
-              <td className="py-1.5 pr-3 text-right">{r.gflops}</td>
-              <td className="py-1.5 text-right">{r.fps}</td>
+              <td className="hidden py-1.5 pr-3 sm:table-cell">{r.pretraining}</td>
+              <td className="py-1.5 pr-3 text-right">{fmt(r.metric)}</td>
+              {second && <td className="py-1.5 pr-3 text-right">{r.secondary ? fmt(r.secondary.value) : '–'}</td>}
+              <td className="py-1.5 pr-3 text-right">{r.fps}</td>
+              <td className="py-1.5 text-right">{r.gflops}</td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
+      {/* Hint that the table scrolls sideways on narrow screens. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:hidden"
+        style={{ background: `linear-gradient(to left, ${VIZ.surface}, transparent)` }}
+      />
     </div>
   );
 };
@@ -256,7 +264,7 @@ const PerformanceChart: React.FC = () => {
               aria-pressed={dataset === ds}
               onClick={() => setDataset(ds)}
               className={`rounded px-2.5 py-1.5 text-[11px] font-mono transition-colors ${
-                dataset === ds ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                dataset === ds ? 'bg-cyan-700 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
               {DATASET_LABELS[ds]}
@@ -303,40 +311,41 @@ const PerformanceChart: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div className="rounded-lg border border-slate-800 p-4" style={{ background: VIZ.surface }}>
-              <div className="mb-3 text-[10px] font-mono uppercase tracking-wider" style={{ color: VIZ.textMuted }}>
+            <div className="order-1 rounded-lg border border-slate-800 p-4" style={{ background: VIZ.surface }}>
+              <div className="mb-3 text-[10px] font-mono uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
                 Accuracy vs speed
               </div>
               <ScatterPlot rows={rows} activeId={active?.id ?? null} onActivate={setActiveId} />
             </div>
-            <div className="rounded-lg border border-slate-800 p-4" style={{ background: VIZ.surface }}>
-              <div className="mb-3 text-[10px] font-mono uppercase tracking-wider" style={{ color: VIZ.textMuted }}>
+            <div className="order-3 rounded-lg border border-slate-800 p-4 lg:order-2" style={{ background: VIZ.surface }}>
+              <div className="mb-3 text-[10px] font-mono uppercase tracking-wider" style={{ color: VIZ.textSecondary }}>
                 {metricLabel(vid)} and FPS by method
               </div>
               <BarList rows={rows} activeId={active?.id ?? null} onActivate={setActiveId} />
             </div>
-          </div>
 
-          {/* Readout shared by both charts: hover, focus or tap a mark. */}
-          <div
-            aria-live="polite"
-            className="min-h-[3.25rem] rounded-lg border border-slate-800 px-4 py-2.5 text-xs"
-            style={{ background: VIZ.surface, color: VIZ.textSecondary }}
-          >
-            {active ? (
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                <span className="text-lg font-semibold tabular-nums" style={{ color: VIZ.textPrimary }}>
-                  {active.metric} <span className="text-xs font-normal">{metricLabel(active)}</span>
-                </span>
-                <span style={{ color: VIZ.textPrimary }}>{rowName(active)}</span>
-                <span className="font-mono">
-                  {active.pretraining} · {active.gflops} GFLOPs · {active.fps} FPS
-                  {active.secondary ? ` · ${active.secondary.name} ${active.secondary.value}` : ''}
-                </span>
-              </div>
-            ) : (
-              <span>Hover, focus or tap a mark to read its numbers. The Table view lists every value.</span>
-            )}
+            {/* Readout shared by both charts: hover, focus or tap a mark. Under the scatter plot on
+                phones and tablets, full width below both charts on desktop. */}
+            <div
+              aria-live="polite"
+              className="order-2 min-h-[3.25rem] rounded-lg border border-slate-800 px-4 py-2.5 text-xs lg:order-3 lg:col-span-2"
+              style={{ background: VIZ.surface, color: VIZ.textSecondary }}
+            >
+              {active ? (
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                  <span className="text-lg font-semibold tabular-nums" style={{ color: VIZ.textPrimary }}>
+                    {fmt(active.metric)} <span className="text-xs font-normal">{metricLabel(active)}</span>
+                  </span>
+                  <span style={{ color: VIZ.textPrimary }}>{rowName(active)}</span>
+                  <span className="font-mono">
+                    {active.pretraining} · {active.gflops} GFLOPs · {active.fps} FPS
+                    {active.secondary ? ` · ${active.secondary.name} ${fmt(active.secondary.value)}` : ''}
+                  </span>
+                </div>
+              ) : (
+                <span>Hover, focus or tap a mark to read its numbers. The Table view lists every value.</span>
+              )}
+            </div>
           </div>
         </>
       ) : (
@@ -346,7 +355,7 @@ const PerformanceChart: React.FC = () => {
       )}
 
       {note && (
-        <p className="text-[11px] leading-relaxed" style={{ color: VIZ.textMuted }}>
+        <p className="text-[11px] leading-relaxed" style={{ color: VIZ.textSecondary }}>
           {note}
         </p>
       )}

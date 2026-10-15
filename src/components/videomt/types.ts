@@ -39,10 +39,16 @@ export interface BenchmarkResult {
   secondary?: { name: string; value: number };
 }
 
+export type ObjectShape = 'rect' | 'ellipse' | 'circle' | 'triangle';
+
 export interface ObjectQuery {
   id: string;
   label: string;
   color: string;
+  /** Which query slot tracks this object. An object keeps its slot for the whole clip. */
+  slot: number;
+  /** A second cue next to colour, so identity never depends on colour alone. */
+  shape: ObjectShape;
   x: number;
   y: number;
   width: number;
@@ -56,4 +62,4 @@ export interface FrameState {
   objects: ObjectQuery[];
 }
 
-export type AnimationPhase = 'idle' | 'propagating' | 'transforming' | 'fusing' | 'complete';
+export type AnimationPhase = 'propagating' | 'transforming' | 'fusing' | 'complete';
