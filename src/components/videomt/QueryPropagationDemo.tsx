@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, Pause, SkipForward, SkipBack, RotateCcw } from 'lucide-react';
 import { DEMO_FRAMES } from './data';
 import type { AnimationPhase } from './types';
@@ -7,16 +7,29 @@ const QueryPropagationDemo: React.FC = () => {
   const [currentFrame, setCurrentFrame] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [phase, setPhase] = useState<AnimationPhase>('complete');
+  const animationTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearAnimationTimers = useCallback(() => {
+    animationTimers.current.forEach(clearTimeout);
+    animationTimers.current = [];
+  }, []);
+
+  useEffect(() => clearAnimationTimers, [currentFrame, clearAnimationTimers]);
 
   const advanceFrame = useCallback(() => {
+    if (animationTimers.current.length > 0) return;
+
     if (currentFrame < DEMO_FRAMES.length - 1) {
       setPhase('propagating');
-      setTimeout(() => setPhase('transforming'), 400);
-      setTimeout(() => setPhase('fusing'), 800);
-      setTimeout(() => {
-        setPhase('complete');
-        setCurrentFrame((f) => f + 1);
-      }, 1200);
+      animationTimers.current = [
+        setTimeout(() => setPhase('transforming'), 400),
+        setTimeout(() => setPhase('fusing'), 800),
+        setTimeout(() => {
+          animationTimers.current = [];
+          setPhase('complete');
+          setCurrentFrame((f) => Math.min(f + 1, DEMO_FRAMES.length - 1));
+        }, 1200),
+      ];
     } else {
       setIsPlaying(false);
     }
@@ -28,22 +41,34 @@ const QueryPropagationDemo: React.FC = () => {
     return () => clearInterval(timer);
   }, [isPlaying, advanceFrame]);
 
+  const pause = () => {
+    clearAnimationTimers();
+    setIsPlaying(false);
+    setPhase('complete');
+  };
+
   const stepForward = () => {
     if (currentFrame < DEMO_FRAMES.length - 1 && phase === 'complete') {
+      pause();
       advanceFrame();
     }
   };
 
   const stepBack = () => {
     if (currentFrame > 0 && phase === 'complete') {
+      pause();
       setCurrentFrame((f) => f - 1);
     }
   };
 
   const reset = () => {
-    setIsPlaying(false);
+    pause();
     setCurrentFrame(0);
-    setPhase('complete');
+  };
+
+  const selectFrame = (index: number) => {
+    pause();
+    setCurrentFrame(index);
   };
 
   const frame = DEMO_FRAMES[currentFrame];
@@ -63,7 +88,7 @@ const QueryPropagationDemo: React.FC = () => {
                 ? 'border-slate-600 opacity-70'
                 : 'border-slate-700 opacity-40'
             } bg-slate-900 overflow-hidden cursor-pointer`}
-            onClick={() => { if (phase === 'complete') setCurrentFrame(i); }}
+            onClick={() => selectFrame(i)}
           >
             {/* Frame label */}
             <div className="absolute top-1 left-1 text-[8px] font-mono text-slate-500 bg-slate-900/80 px-1 rounded">
@@ -97,7 +122,7 @@ const QueryPropagationDemo: React.FC = () => {
           <SkipBack className="w-4 h-4" />
         </button>
         <button
-          onClick={() => setIsPlaying(!isPlaying)}
+          onClick={() => { if (isPlaying) pause(); else setIsPlaying(true); }}
           className="p-3 rounded-lg bg-cyan-600 text-white hover:bg-cyan-500 transition-colors"
         >
           {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
